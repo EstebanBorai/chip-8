@@ -1,0 +1,69 @@
+use std::ops::Index;
+
+/// Chip8 Fonts
+///
+/// Refer: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#0.0
+const FONTS: [u8; 0x0050] = [
+    0xF0, 0x90, 0x90, 0x90, 0xF0, // Font: 0
+    0x20, 0x60, 0x20, 0x20, 0x70, // Font: 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0, // Font: 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0, // Font: 3
+    0x90, 0x90, 0xF0, 0x10, 0x10, // Font: 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0, // Font: 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0, // Font: 6
+    0xF0, 0x10, 0x20, 0x40, 0x40, // Font: 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0, // Font: 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, // Font: 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90, // Font: A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0, // Font: B
+    0xF0, 0x80, 0x80, 0x80, 0xF0, // Font: C
+    0xE0, 0x90, 0x90, 0x90, 0xE0, // Font: D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0, // Font: E
+    0xF0, 0x80, 0xF0, 0x80, 0x80, // Font: F
+];
+
+/// # Memory Map
+///
+/// ```
+/// 0x0000 ------------------> STR
+/// | System Fonts         |
+/// 0x0050 -----------------
+/// | Interpreter Reserved |
+/// 0x0200 -----------------
+/// | User Space           |
+/// 0x1000 ------------------> END - 4096B
+/// ```
+pub struct Memory([u8; 4096]);
+
+impl Default for Memory {
+    fn default() -> Self {
+        let mut mem = [0; 0x1000];
+
+        // Load fonts into interpreter reserved memory
+        mem[..0x050].copy_from_slice(&FONTS);
+
+        Self(mem)
+    }
+}
+
+impl Index<usize> for Memory {
+    type Output = u8;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Memory, FONTS};
+
+    #[test]
+    fn default_loads_fonts_into_memory() {
+        let mem = Memory::default();
+
+        assert_eq!(mem[0x0000], FONTS[0x0000]);
+        assert_eq!(mem[0x0049], FONTS[0x0049]);
+        assert_eq!(mem[0x0050], 0x0000);
+    }
+}
