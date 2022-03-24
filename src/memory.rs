@@ -22,7 +22,20 @@ const FONTS: [u8; 0x0050] = [
     0xF0, 0x80, 0xF0, 0x80, 0x80, // Font: F
 ];
 
-/// # Memory Map
+/// Memory Address for User Space area start
+pub const USER_SPACE_STR: usize = 0x0200;
+
+/// The highest memory address available
+pub const MEMORY_END: usize = 0x1000;
+
+/// # The CHIP-8 Memory
+///
+/// CHIP-8 Memory is 4KB (4096 bytes) of size, the index register (IR) can only
+/// address 12 bits.
+///
+/// Fonts are also stored as by default in this memory, games will atempt to
+/// read them so they cant be removed or overwritten by ROMs. From space `0x0000`
+/// to `0x0050`, fonts are layered into memory.
 ///
 /// ```
 /// 0x0000 ------------------> STR
@@ -54,9 +67,18 @@ impl Index<usize> for Memory {
     }
 }
 
+impl Memory {
+    /// Allocates bytes in the `User Space` (0x0200 and beyond)
+    pub fn load(&mut self, bytes: &[u8]) {
+        let area = USER_SPACE_STR + bytes.len();
+
+        self.0[USER_SPACE_STR..area].copy_from_slice(&bytes);
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Memory, FONTS};
+    use super::{Memory, FONTS, USER_SPACE_STR};
 
     #[test]
     fn default_loads_fonts_into_memory() {
@@ -65,5 +87,22 @@ mod tests {
         assert_eq!(mem[0x0000], FONTS[0x0000]);
         assert_eq!(mem[0x0049], FONTS[0x0049]);
         assert_eq!(mem[0x0050], 0x0000);
+    }
+
+    #[test]
+    fn allocates_bytes_into_memory_user_space() {
+        let mut mem = Memory::default();
+        let bytes: [u8; 5] = [0x01A, 0x02A, 0x03A, 0x04A, 0x05A];
+
+        mem.load(&bytes);
+
+        assert_eq!(mem[0x0000], FONTS[0x0000]);
+        assert_eq!(mem[0x0049], FONTS[0x0049]);
+        assert_eq!(mem[USER_SPACE_STR], 0x01A);
+        assert_eq!(mem[USER_SPACE_STR + 1], 0x02A);
+        assert_eq!(mem[USER_SPACE_STR + 2], 0x03A);
+        assert_eq!(mem[USER_SPACE_STR + 3], 0x04A);
+        assert_eq!(mem[USER_SPACE_STR + 4], 0x05A);
+        assert_eq!(mem[USER_SPACE_STR + 5], 0x000);
     }
 }
