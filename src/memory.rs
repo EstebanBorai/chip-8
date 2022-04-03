@@ -37,7 +37,7 @@ pub const MEMORY_END: usize = 0x1000;
 /// read them so they cant be removed or overwritten by ROMs. From space `0x0000`
 /// to `0x0050`, fonts are layered into memory.
 ///
-/// ```
+/// ```ignore
 /// 0x0000 ------------------> STR
 /// | System Fonts         |
 /// 0x0050 -----------------
@@ -46,6 +46,7 @@ pub const MEMORY_END: usize = 0x1000;
 /// | User Space           |
 /// 0x1000 ------------------> END - 4096B
 /// ```
+#[derive(Debug)]
 pub struct Memory([u8; 4096]);
 
 impl Default for Memory {
@@ -73,6 +74,11 @@ impl Memory {
         let area = USER_SPACE_STR + bytes.len();
 
         self.0[USER_SPACE_STR..area].copy_from_slice(&bytes);
+    }
+
+    pub fn get_at(&self, pos: usize) -> u8 {
+        info!("ADDR: {:#04x} <-> VAL: {:#04x}", pos, self.0[pos]);
+        self.0[pos]
     }
 }
 

@@ -1,7 +1,5 @@
-mod cpu;
-mod memory;
-mod stack;
+use chip8::run_from_args;
 
 fn main() {
-    todo!()
+    run_from_args();
 }
