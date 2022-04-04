@@ -64,6 +64,10 @@ impl Index<usize> for Memory {
     type Output = u8;
 
     fn index(&self, index: usize) -> &Self::Output {
+        println!(
+            "MemoryAccessByAddress ==> Addr: {:#04x} <-> Value: {:#04x}",
+            index, self.0[index]
+        );
         &self.0[index]
     }
 }
@@ -74,11 +78,6 @@ impl Memory {
         let area = USER_SPACE_STR + bytes.len();
 
         self.0[USER_SPACE_STR..area].copy_from_slice(&bytes);
-    }
-
-    pub fn get_at(&self, pos: usize) -> u8 {
-        info!("ADDR: {:#04x} <-> VAL: {:#04x}", pos, self.0[pos]);
-        self.0[pos]
     }
 }
 
