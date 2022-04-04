@@ -1,3 +1,6 @@
+use std::fs;
+
+use crate::config::Config;
 use crate::memory::{Memory, USER_SPACE_STR};
 use crate::stack::Stack;
 
@@ -10,6 +13,19 @@ pub struct Cpu {
     pub(crate) stack: Stack,
     /// Program Counter
     pub(crate) pc: u16,
+}
+
+impl TryFrom<Config> for Cpu {
+    type Error = ();
+
+    fn try_from(config: Config) -> Result<Self, Self::Error> {
+        let mut cpu = Cpu::new();
+        let bytes = fs::read(config.rom).expect("Failed to find ROM");
+
+        cpu.load(&bytes);
+
+        Ok(cpu)
+    }
 }
 
 impl Cpu {

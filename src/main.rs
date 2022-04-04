@@ -1,5 +1,10 @@
-use chip8::run_from_args;
+use chip8::config::Config;
+use chip8::cpu::Cpu;
+use structopt::StructOpt;
 
 fn main() {
-    run_from_args();
+    let config = Config::from_args();
+    let mut cpu = Cpu::try_from(config).unwrap();
+
+    cpu.run_cycle();
 }
