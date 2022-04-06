@@ -77,7 +77,7 @@ impl Memory {
     pub fn load(&mut self, bytes: &[u8]) {
         let area = USER_SPACE_STR + bytes.len();
 
-        self.0[USER_SPACE_STR..area].copy_from_slice(&bytes);
+        self.0[USER_SPACE_STR..area].copy_from_slice(bytes);
     }
 }
 

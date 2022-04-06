@@ -1,7 +1,5 @@
-## Development
-
-For development purposes you can use `env_logger` to have logs on CHIP-8 tasks.
+## Running it Locally
 
 ```bash
-RUST_LOG=info cargo run ./roms/IBM.ch8
+cargo run ./roms/IBM.ch8
 ```
