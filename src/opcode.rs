@@ -123,7 +123,7 @@ impl Opcode {
             (0x0F, _, 0x03, 0x03) => Instruction::StoreBcd(vx),
             (0x0F, _, 0x05, 0x05) => Instruction::SetRegsInI(vx),
             (0x0F, _, 0x06, 0x05) => Instruction::GetRegsInI(vx),
-            _ => panic!("Unsupported OpCode {:#04x}", self.0),
+            _ => Instruction::Ignore(self.0),
         }
     }
 }
@@ -138,6 +138,7 @@ impl From<u16> for Opcode {
 ///
 /// Refer: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#3.1
 pub enum Instruction {
+    Ignore(u16),
     /// `0nnn` - SYS addr
     /// Jump to a machine code routine at nnn.
     ///

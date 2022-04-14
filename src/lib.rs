@@ -4,5 +4,6 @@ pub mod display;
 pub mod memory;
 pub mod opcode;
 pub mod register_set;
+pub mod rom;
 pub mod stack;
 pub mod system;

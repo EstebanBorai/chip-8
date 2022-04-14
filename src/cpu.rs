@@ -3,11 +3,10 @@ use crate::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use crate::memory::{Memory, USER_SPACE_STR};
 use crate::opcode::{Instruction, Opcode};
 use crate::register_set::RegisterSet;
+use crate::rom::Rom;
 use crate::stack::Stack;
 
 pub const CLOCK_RATE: f32 = 600.0;
-
-pub type Rom = Vec<u8>;
 
 pub struct Cpu {
     /// System available memory.
@@ -58,8 +57,8 @@ impl Cpu {
     }
 
     /// Loads ROM bytes into memory
-    pub fn load(&mut self, rom: &[u8]) {
-        self.ram.load(rom);
+    pub fn load(&mut self, rom: Rom) {
+        self.ram.load(rom.bytes());
     }
 
     /// Runs a CPU Cycle.
@@ -76,6 +75,7 @@ impl Cpu {
     /// Executes the provided instruction
     pub fn execute(&mut self, instr: Instruction) {
         match instr {
+            Instruction::Ignore(opcode) => println!("Ignored: {:#04x}", opcode),
             Instruction::Cls => self.display_buffer.reset(),
             Instruction::Ret(address) => {
                 self.sp += 1;

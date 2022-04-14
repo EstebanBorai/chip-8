@@ -1,12 +1,11 @@
-use anyhow::Error;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::EventPump;
-use std::fs;
 
 use crate::config::Config;
 use crate::cpu::Cpu;
 use crate::display::Display;
+use crate::rom::Rom;
 
 pub struct System {
     config: Config,
@@ -21,11 +20,9 @@ impl System {
         let sdl = sdl2::init().unwrap();
         let event_pump = sdl.event_pump().unwrap();
         let display = Display::new(&sdl, "Chip8", 2);
-        let bytes = fs::read(&config.rom)
-            .map_err(|err| Error::msg(err.to_string()))
-            .expect("Failed to read ROM.");
+        let rom = Rom::from_path(&config.rom);
 
-        cpu.load(&bytes);
+        cpu.load(rom);
 
         Self {
             config,

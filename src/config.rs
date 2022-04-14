@@ -14,4 +14,7 @@ pub struct Config {
     /// Debug mode
     #[structopt(short = "d", long = "debug")]
     pub debug: bool,
+    /// Inspect instructions from ROM
+    #[structopt(short = "i", long = "inspect")]
+    pub inspect: bool,
 }
