@@ -129,33 +129,76 @@ impl Cpu {
                 self.registers[vx] = self.registers[vy]
             }
             Instruction::BitOpOr(vx, vy) => {
+                println!("BitOpOr: VX: {:#04x} VY: {:#04x}", vx, vy);
+                println!(
+                    "Registers: \n {:#04x} == {:#04x} \n {:#04x} == {:#04x}",
+                    vx, self.registers[vx], vy, self.registers[vy]
+                );
                 self.registers[vx] = self.registers[vx] | self.registers[vy];
                 self.pc += 2;
             }
             Instruction::BitOpAnd(vx, vy) => {
+                println!("BitOpAnd: VX: {:#04x} VY: {:#04x}", vx, vy);
+                println!(
+                    "Registers: \n {:#04x} == {:#04x} \n {:#04x} == {:#04x}",
+                    vx, self.registers[vx], vy, self.registers[vy]
+                );
                 self.registers[vx] = self.registers[vx] & self.registers[vy];
                 self.pc += 2;
             }
             Instruction::BitOpXor(vx, vy) => {
+                println!("BitOpXor: VX: {:#04x} VY: {:#04x}", vx, vy);
+                println!(
+                    "Registers: \n {:#04x} == {:#04x} \n {:#04x} == {:#04x}",
+                    vx, self.registers[vx], vy, self.registers[vy]
+                );
                 self.registers[vx] = self.registers[vx] ^ self.registers[vy]
             }
             Instruction::MathAdd(vx, vy) => {
+                println!("MathAdd: VX: {:#04x} VY: {:#04x}", vx, vy);
+                println!(
+                    "Registers: \n {:#04x} == {:#04x} \n {:#04x} == {:#04x}",
+                    vx, self.registers[vx], vy, self.registers[vy]
+                );
                 self.registers[vx] = self.registers[vx] + self.registers[vy]
             }
             Instruction::MathSub(vx, vy) => {
+                println!("MathSub: VX: {:#04x} VY: {:#04x}", vx, vy);
+                println!(
+                    "Registers: \n {:#04x} == {:#04x} \n {:#04x} == {:#04x}",
+                    vx, self.registers[vx], vy, self.registers[vy]
+                );
                 self.registers[vx] = self.registers[vx] - self.registers[vy]
             }
-            Instruction::BitOpShr(vx) => self.registers[vx] = self.registers[vx] >> 1,
+            Instruction::BitOpShr(vx) => {
+                println!("BitOpShr: VX: {:#04x}", vx);
+                println!("Registers: \n {:#04x} == {:#04x}", vx, self.registers[vx]);
+                self.registers[vx] = self.registers[vx] >> 1
+            }
             Instruction::MathSubVyVx(vx, vy) => {
-                self.registers[vx] = self.registers[vx] - self.registers[vy]
+                println!("MathSubVyVx: VX: {:#04x} VY: {:#04x}", vx, vy);
+                println!("Registers: \n {:#04x} == {:#04x}", vx, self.registers[vx]);
+                self.registers[vx] = self.registers[vx] - vy as u8
             }
-            Instruction::BitOpShl(vx) => self.registers[vx] = self.registers[vx] << 1,
+            Instruction::BitOpShl(vx) => {
+                println!("BitOpShl: VX: {:#04x}", vx);
+                println!("Registers: \n {:#04x} == {:#04x}", vx, self.registers[vx]);
+                self.registers[vx] = self.registers[vx] << 1;
+            }
             Instruction::CondVxNotEqVy(vx, vy) => {
+                println!("CondVxNotEqVy: VX: {:#04x} VY: {:#04x}", vx, vy);
+                println!(
+                    "Registers: \n {:#04x} == {:#04x} \n {:#04x} == {:#04x}",
+                    vx, self.registers[vx], vy, self.registers[vy]
+                );
                 if self.registers[vx] != self.registers[vy] {
                     self.pc += 2;
                 }
             }
-            Instruction::Mem(nnn) => self.i = nnn,
+            Instruction::Mem(nnn) => {
+                println!("Mem: NNN: {:#04x}", nnn);
+                self.i = nnn;
+            }
             _ => {}
         }
     }
@@ -253,7 +296,7 @@ mod tests {
     }
 
     #[test]
-    fn instr_condeq() {
+    fn instr_cond_eq() {
         let mut cpu = Cpu::new();
         let rom = vec![
             0x6B, // Assigns Vx to 2
@@ -273,7 +316,7 @@ mod tests {
     }
 
     #[test]
-    fn instr_condnoteq() {
+    fn instr_cond_not_eq() {
         let mut cpu = Cpu::new();
         let rom = vec![0x32, 0x04];
 
@@ -288,7 +331,7 @@ mod tests {
     }
 
     #[test]
-    fn instr_condeqvxvy() {
+    fn instr_cond_eq_vx_vy() {
         let mut cpu = Cpu::new();
         let rom = vec![
             // Assigns Vx to 11
@@ -308,7 +351,7 @@ mod tests {
     }
 
     #[test]
-    fn instr_constassignvxtokk() {
+    fn instr_const_assign_vx_to_kk() {
         let mut cpu = Cpu::new();
         let rom = vec![
             // Assigns Vx to 11
@@ -325,7 +368,7 @@ mod tests {
     }
 
     #[test]
-    fn instr_assignvxtovy() {
+    fn instr_assign_vx_to_vy() {
         let mut cpu = Cpu::new();
         let rom = vec![
             // Assigns Vx to 8, this will be our next Vy register
@@ -345,5 +388,204 @@ mod tests {
             cpu.registers[0x0B], 0x08,
             "Register 0x0B has value of 0x0A (0x08)"
         );
+    }
+
+    #[test]
+    fn instr_bit_op_or() {
+        let mut cpu = Cpu::new();
+        let rom = vec![
+            // Assigns 0x0a to 4
+            0x6A, 0x04, // Assigns 0x0b to 2
+            0x6B, 0x02, // Perform OR on 0x0a | 0x0b
+            0x8A, 0xB1,
+        ];
+
+        cpu.load(&rom);
+        cpu.cycle();
+        cpu.cycle();
+        cpu.cycle();
+
+        assert_eq!(
+            cpu.registers[0x0a], 0x06,
+            "Register on 0x0A is set to 0x06 due to the result from 4 | 2"
+        );
+    }
+
+    #[test]
+    fn instr_bit_op_and() {
+        let mut cpu = Cpu::new();
+        let rom = vec![
+            // Assigns 0x0a to 10
+            0x6A, 0x0A, // Assigns 0x0b to 11
+            0x6B, 0x0B, // Perform AND on 0x0a | 0x0b
+            0x8A, 0xB2,
+        ];
+
+        cpu.load(&rom);
+        cpu.cycle();
+        cpu.cycle();
+        cpu.cycle();
+
+        assert_eq!(
+            cpu.registers[0x0a], 0x0a,
+            "Register on 0x0A is set to 0x0A due to the result from 10 & 11"
+        );
+    }
+
+    #[test]
+    fn instr_bit_xor_and() {
+        let mut cpu = Cpu::new();
+        let rom = vec![
+            // Assigns 0x0a to 4
+            0x6A, 0x04, // Assigns 0x0b to 8
+            0x6B, 0x08, // Perform AND on 0x0a | 0x0b
+            0x8A, 0xB3,
+        ];
+
+        cpu.load(&rom);
+        cpu.cycle();
+        cpu.cycle();
+        cpu.cycle();
+
+        assert_eq!(
+            cpu.registers[0x0a], 0x0c,
+            "Register on 0x0A is set to 0x0C due to the result from 4 ^ 8"
+        );
+    }
+
+    #[test]
+    fn instr_math_add() {
+        let mut cpu = Cpu::new();
+        let rom = vec![
+            // Assigns 0x0a to 10
+            0x6A, 0x0A, // Assigns 0x0b to 13
+            0x6B, 0x0D, // Perform AND on 0x0a | 0x0b
+            0x8A, 0xB4,
+        ];
+
+        cpu.load(&rom);
+        cpu.cycle();
+        cpu.cycle();
+        cpu.cycle();
+
+        assert_eq!(
+            cpu.registers[0x0a], 0x17,
+            "Register on 0x0A is set to 0x17 due to the result from 10 + 13"
+        );
+    }
+
+    #[test]
+    fn instr_math_sub() {
+        let mut cpu = Cpu::new();
+        let rom = vec![
+            // Assigns 0x0a to 13
+            0x6A, 0x0D, // Assigns 0x0b to 10
+            0x6B, 0x0A, // Perform AND on 0x0a | 0x0b
+            0x8A, 0xB5,
+        ];
+
+        cpu.load(&rom);
+        cpu.cycle();
+        cpu.cycle();
+        cpu.cycle();
+
+        assert_eq!(
+            cpu.registers[0x0a], 0x03,
+            "Register on 0x0A is set to 0x03 due to the result from 13 - 10"
+        );
+    }
+
+    #[test]
+    fn instr_bit_op_shr() {
+        let mut cpu = Cpu::new();
+        let rom = vec![
+            // Assigns 0x0a to 10
+            0x6A, 0x0A, // Perform SHR on 0x0a >> 1
+            0x8A, 0xB6,
+        ];
+
+        cpu.load(&rom);
+        cpu.cycle();
+        cpu.cycle();
+
+        assert_eq!(
+            cpu.registers[0x0a], 0x05,
+            "Register on 0x0A is set to 0x05 due to the result from 10 >> 1"
+        );
+    }
+
+    #[test]
+    fn instr_math_sub_vy_vx() {
+        let mut cpu = Cpu::new();
+        let rom = vec![
+            // Assigns 0x0a to 10
+            0x6A, 0x0A, // Perform 0x0a - 10
+            0x8A, 0xA7,
+        ];
+
+        cpu.load(&rom);
+        cpu.cycle();
+        cpu.cycle();
+
+        assert_eq!(
+            cpu.registers[0x0a], 0x00,
+            "Register on 0x0A is set to 0x00 due to the result from 10 - 10"
+        );
+    }
+
+    #[test]
+    fn instr_bit_op_shl() {
+        let mut cpu = Cpu::new();
+        let rom = vec![
+            // Assigns 0x0a to 10
+            0x6A, 0x0A, // Perform SHR on 0x0a << 1
+            0x8A, 0xBE,
+        ];
+
+        cpu.load(&rom);
+        cpu.cycle();
+        cpu.cycle();
+
+        assert_eq!(
+            cpu.registers[0x0a], 0x14,
+            "Register on 0x0A is set to 0x14 due to the result from 10 << 1"
+        );
+    }
+
+    #[test]
+    fn instr_cond_vx_not_eq_vy() {
+        let mut cpu = Cpu::new();
+        let initial_pc = cpu.pc;
+        let rom = vec![
+            // Assigns 0x0a to 10
+            0x6A, 0x0A, // Assigns 0x0b to 1
+            0x6B, 0x01, // Perform != on 0x0a != 0x0b
+            0x9A, 0xB0,
+        ];
+
+        cpu.load(&rom);
+        cpu.cycle();
+        cpu.cycle();
+        cpu.cycle();
+
+        assert_eq!(
+            cpu.pc,
+            initial_pc + 8,
+            "Program Counter is set to it's initial value plus 3 cycles and the skip"
+        );
+    }
+
+    #[test]
+    fn instr_mem() {
+        let mut cpu = Cpu::new();
+        let rom = vec![
+            // Sets Index Register to Address 123
+            0xA1, 0x23,
+        ];
+
+        cpu.load(&rom);
+        cpu.cycle();
+
+        assert_eq!(cpu.i, 0x0123, "Index register is set to 0x0123");
     }
 }

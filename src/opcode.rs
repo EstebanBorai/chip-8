@@ -75,6 +75,7 @@ impl Opcode {
     /// Decodes a `Opcode` as hexadecimal as an `Instruction` which can be
     /// processed by the CPU.
     pub fn decode(&self) -> Instruction {
+        println!("Decoding: {:#04x}", self.0);
         match self.0 {
             0x00E0 => Instruction::Cls,
             0x00EE => Instruction::Ret,
@@ -86,15 +87,18 @@ impl Opcode {
             0x5000..=0x5FFF => Instruction::CondEqVxVy(self.vx(), self.vy()),
             0x6000..=0x6FFF => Instruction::ConstAssignVxToKk(self.vx(), self.kk()),
             0x7000..=0x7FFF => Instruction::ConstAddVxToKk(self.vx(), self.kk()),
-            0x8000..=0x8FF0 => Instruction::AssignVxToVy(self.vx(), self.vy()),
-            0x8001..=0x8FF1 => Instruction::BitOpOr(self.vx(), self.vy()),
-            0x8002..=0x8FF2 => Instruction::BitOpAnd(self.vx(), self.vy()),
-            0x8003..=0x8FF3 => Instruction::BitOpXor(self.vx(), self.vy()),
-            0x8004..=0x8FF4 => Instruction::MathAdd(self.vx(), self.vy()),
-            0x8005..=0x8FF5 => Instruction::MathSub(self.vx(), self.vy()),
-            0x8006..=0x8FF6 => Instruction::BitOpShr(self.vx()),
-            0x8007..=0x8FF7 => Instruction::MathSubVyVx(self.vx(), self.vy()),
-            0x8008..=0x8FF8 => Instruction::BitOpShl(self.vx()),
+            0x8000..=0x8FFF => match self.n() {
+                0x00 => Instruction::AssignVxToVy(self.vx(), self.vy()),
+                0x01 => Instruction::BitOpOr(self.vx(), self.vy()),
+                0x02 => Instruction::BitOpAnd(self.vx(), self.vy()),
+                0x03 => Instruction::BitOpXor(self.vx(), self.vy()),
+                0x04 => Instruction::MathAdd(self.vx(), self.vy()),
+                0x05 => Instruction::MathSub(self.vx(), self.vy()),
+                0x06 => Instruction::BitOpShr(self.vx()),
+                0x07 => Instruction::MathSubVyVx(self.vx(), self.vy()),
+                0x0E => Instruction::BitOpShl(self.vx()),
+                _ => panic!("Uncovered OpCode {:#04x} (N: {:#04x})", self.0, self.n()),
+            },
             0x9000..=0x9FFF => Instruction::CondVxNotEqVy(self.vx(), self.vy()),
             0xA000..=0xAFFF => Instruction::Mem(self.nnn()),
             0xB000..=0xBFFF => Instruction::JumpPcV0(self.nnn()),
