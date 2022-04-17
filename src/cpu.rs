@@ -4,6 +4,7 @@ use std::fs;
 use crate::config::Config;
 use crate::memory::{Memory, USER_SPACE_STR};
 use crate::opcode::{Instruction, Opcode};
+use crate::register_set::RegisterSet;
 use crate::stack::Stack;
 
 pub type Rom = Vec<u8>;
@@ -20,7 +21,7 @@ pub struct Cpu {
     /// General Purpose Variable Registers
     ///
     /// 16 8-bit variable registers numbered from 0 through F.
-    pub(crate) registers: [u8; 0x0016],
+    pub(crate) registers: RegisterSet,
     /// Sound Timer (ST)
     pub(crate) st: u8,
     /// Delay Timer (DT)
@@ -54,7 +55,7 @@ impl Cpu {
         Self {
             ram: Memory::default(),
             pc: USER_SPACE_STR as u16,
-            registers: [0x0000; 0x0016],
+            registers: RegisterSet::default(),
             i: 0x0000,
             stack: Stack::default(),
             st: 0,
