@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.56"
+sdl2 = "0.35.2"
 structopt = { version = "0.3.26", default-features = false }

@@ -2,10 +2,14 @@ use anyhow::Error;
 use std::fs;
 
 use crate::config::Config;
+use crate::display::buffer::DisplayBuffer;
+use crate::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use crate::memory::{Memory, USER_SPACE_STR};
 use crate::opcode::{Instruction, Opcode};
 use crate::register_set::RegisterSet;
 use crate::stack::Stack;
+
+pub const CLOCK_RATE: f32 = 600.0;
 
 pub type Rom = Vec<u8>;
 
@@ -26,6 +30,8 @@ pub struct Cpu {
     pub(crate) st: u8,
     /// Delay Timer (DT)
     pub(crate) dt: u8,
+    /// Display Buffer to hold bytes mapped to output display
+    pub(crate) display_buffer: DisplayBuffer,
 }
 
 impl Default for Cpu {
@@ -60,7 +66,12 @@ impl Cpu {
             stack: Stack::default(),
             st: 0,
             dt: 0,
+            display_buffer: DisplayBuffer::default(),
         }
+    }
+
+    pub fn display_buffer(&self) -> DisplayBuffer {
+        self.display_buffer
     }
 
     /// Loads ROM bytes into memory
@@ -79,11 +90,10 @@ impl Cpu {
         self.execute(instr);
     }
 
+    /// Executes the provided instruction
     pub fn execute(&mut self, instr: Instruction) {
         match instr {
-            Instruction::Cls => {
-                todo!("Clear display turning all pixels to 0")
-            }
+            Instruction::Cls => self.display_buffer.reset(),
             Instruction::Ret => self.pc = self.stack.pop().expect("Out of bounds!"),
             Instruction::SysAddr => println!("WARN: COSMAC VIP Only Instruction. Skipping."),
             Instruction::Jump(address) => self.pc = address,
@@ -161,7 +171,11 @@ impl Cpu {
                     "Registers: \n {:#04x} == {:#04x} \n {:#04x} == {:#04x}",
                     vx, self.registers[vx], vy, self.registers[vy]
                 );
-                self.registers[vx] = self.registers[vx] + self.registers[vy]
+
+                let (result, overflows) = self.registers[vx].overflowing_add(self.registers[vy]);
+
+                self.registers[0x0F] = overflows as u8;
+                self.registers[vx] = result;
             }
             Instruction::MathSub(vx, vy) => {
                 println!("MathSub: VX: {:#04x} VY: {:#04x}", vx, vy);
@@ -169,7 +183,11 @@ impl Cpu {
                     "Registers: \n {:#04x} == {:#04x} \n {:#04x} == {:#04x}",
                     vx, self.registers[vx], vy, self.registers[vy]
                 );
-                self.registers[vx] = self.registers[vx] - self.registers[vy]
+
+                let (result, overflows) = self.registers[vx].overflowing_sub(self.registers[vy]);
+
+                self.registers[0x0F] = overflows as u8;
+                self.registers[vx] = result;
             }
             Instruction::BitOpShr(vx) => {
                 println!("BitOpShr: VX: {:#04x}", vx);
@@ -199,6 +217,60 @@ impl Cpu {
             Instruction::Mem(nnn) => {
                 println!("Mem: NNN: {:#04x}", nnn);
                 self.i = nnn;
+            }
+            Instruction::Draw(vx, vy, n) => {
+                println!("Draw: VX: {:#04x} VY: {:#04x} N: {:#04x}", vx, vy, n);
+                // Set the X coordinate to the value in VX modulo 64 (or,
+                // equivalently, VX & 63, where & is the binary AND operation)
+                let x = self.registers[vx] & 63;
+                // Set the Y coordinate to the value in VY modulo 32
+                // (or VY & 31)
+                let y = self.registers[vy] & 31;
+
+                // Set VF to 0
+                self.registers[0x0F] = 0x0;
+
+                for row in 0..n {
+                    let bits = self.ram[(self.i + row as u16) as usize];
+                    let this_y = (y + row as u8) as u32 % SCREEN_HEIGHT;
+
+                    for col in 0..8 {
+                        let this_x = (x + col as u8) as u32 % SCREEN_WIDTH;
+                        let current_color =
+                            self.display_buffer[(this_y * SCREEN_WIDTH + this_x) as usize];
+                        let mask = 0x01 << 7 - col;
+                        let color = bits & mask;
+
+                        if color > 0 {
+                            if current_color > 0 {
+                                self.display_buffer[(this_y * SCREEN_WIDTH + this_x) as usize] = 0;
+                                self.registers[0x0F] = 1;
+                            } else {
+                                self.display_buffer[(this_y * SCREEN_WIDTH + this_x) as usize] = 1;
+                            }
+                        }
+
+                        if this_x == SCREEN_WIDTH - 1 {
+                            break;
+                        }
+                    }
+
+                    if this_y == SCREEN_HEIGHT - 1 {
+                        break;
+                    }
+                }
+            }
+            Instruction::SetDtEqToVx(vx) => {
+                println!("SetDtEqToVx: VX: {:#04x}", vx);
+                println!("Registers: {:#04x} == {:#04x}", vx, self.registers[vx]);
+                println!("Delay Timer: {:#04x}", self.dt);
+                self.dt = self.registers[vx]
+            }
+            Instruction::SetVxEqToDt(vx) => {
+                println!("SetVxEqToDt: VX: {:#04x}", vx);
+                println!("Registers: {:#04x} == {:#04x}", vx, self.registers[vx]);
+                println!("Delay Timer: {:#04x}", self.dt);
+                self.registers[vx] = self.dt;
             }
             _ => {}
         }
@@ -246,13 +318,42 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Clear display turning all pixels to 0")]
     fn instr_cls() {
         let mut cpu = Cpu::new();
-        let rom = vec![0x00, 0xE0];
+        let initial_display_buffer = cpu.display_buffer();
+        let rom = vec![
+            // Writes to Display Buffer
+            0xDF, 0xB8,
+        ];
 
         cpu.load(&rom);
         cpu.cycle();
+
+        let written_display_buffer = cpu.display_buffer();
+
+        let rom = vec![
+            // Clears Display Buffer
+            0x00, 0xE0,
+        ];
+
+        cpu.load(&rom);
+        cpu.cycle();
+
+        let cleared_display_buffer = cpu.display_buffer();
+
+        assert!(
+            initial_display_buffer.0.iter().all(|x| *x == 0),
+            "Initially all bytes are 0"
+        );
+        assert_ne!(
+            written_display_buffer.0.iter().fold(0, |acc, x| acc + x),
+            0,
+            "Bytes were written"
+        );
+        assert!(
+            cleared_display_buffer.0.iter().all(|x| *x == 0),
+            "Bytes were cleared"
+        );
     }
 
     #[test]
@@ -473,6 +574,10 @@ mod tests {
             cpu.registers[0x0a], 0x17,
             "Register on 0x0A is set to 0x17 due to the result from 10 + 13"
         );
+        assert_eq!(
+            cpu.registers[0xF0], 1,
+            "Register VF is set to 0 due to lack of overflow"
+        );
     }
 
     #[test]
@@ -493,6 +598,60 @@ mod tests {
         assert_eq!(
             cpu.registers[0x0a], 0x03,
             "Register on 0x0A is set to 0x03 due to the result from 13 - 10"
+        );
+        assert_eq!(
+            cpu.registers[0xF0], 1,
+            "Register VF is set to 0 due to lack of overflow"
+        );
+    }
+
+    #[test]
+    fn instr_math_add_with_overflow() {
+        let mut cpu = Cpu::new();
+        let rom = vec![
+            // Assigns 0x0a to 13
+            0x6F, 0x0D, // Assigns 0x0b to 10
+            0x6F, 0x0A, // Perform on 0x0a + 0x0b
+            0x8F, 0xB5,
+        ];
+
+        cpu.load(&rom);
+        cpu.cycle();
+        cpu.cycle();
+        cpu.cycle();
+
+        assert_eq!(
+            cpu.registers[0x0a], 0x03,
+            "Register on 0x0A is set to 0x03 due to the result from 13 - 10"
+        );
+        assert_eq!(
+            cpu.registers[0xF0], 1,
+            "Register VF is set to 1 due to the overflow"
+        );
+    }
+
+    #[test]
+    fn instr_math_sub_with_overflow() {
+        let mut cpu = Cpu::new();
+        let rom = vec![
+            // Assigns 0x0a to 13
+            0x6F, 0x0D, // Assigns 0x0b to 10
+            0x6F, 0x0A, // Perform on 0x0a + 0x0b
+            0x8A, 0xB5,
+        ];
+
+        cpu.load(&rom);
+        cpu.cycle();
+        cpu.cycle();
+        cpu.cycle();
+
+        assert_eq!(
+            cpu.registers[0x0a], 0x03,
+            "Register on 0x0A is set to 0x03 due to the result from 13 - 10"
+        );
+        assert_eq!(
+            cpu.registers[0xF0], 1,
+            "Register VF is set to 1 due to the overflow"
         );
     }
 
@@ -588,5 +747,45 @@ mod tests {
         cpu.cycle();
 
         assert_eq!(cpu.i, 0x0123, "Index register is set to 0x0123");
+    }
+
+    #[test]
+    fn instr_set_vx_eq_to_dt() {
+        let mut cpu = Cpu::new();
+
+        cpu.dt = 0x05A;
+
+        let rom = vec![
+            // Set the value of DT into Register 0x0a
+            0xFA, 0x07,
+        ];
+
+        cpu.load(&rom);
+        cpu.cycle();
+
+        assert_eq!(
+            cpu.dt, cpu.registers[0x0A],
+            "The Register A is set to the value of the DT"
+        );
+    }
+
+    #[test]
+    fn instr_set_dt_eq_to_vx() {
+        let mut cpu = Cpu::new();
+
+        cpu.dt = 0x05A;
+
+        let rom = vec![
+            // Set the value of Register 0x0a to DT
+            0xFA, 0x15,
+        ];
+
+        cpu.load(&rom);
+        cpu.cycle();
+
+        assert_eq!(
+            cpu.dt, cpu.registers[0x0A],
+            "The DT is set to the value of the Register on VX"
+        );
     }
 }

@@ -1,3 +1,5 @@
+use std::{iter::Inspect, time::Instant};
+
 /// Chip8 opcodes are 16-bit hexadecimal values which represent CPU
 /// instructions. These are decoded and interpreted accordingly based on the
 /// structure of the hexadecimal value.
@@ -103,10 +105,15 @@ impl Opcode {
             0xA000..=0xAFFF => Instruction::Mem(self.nnn()),
             0xB000..=0xBFFF => Instruction::JumpPcV0(self.nnn()),
             0xC000..=0xCFFF => Instruction::Rand(self.vx(), self.kk()),
-            0xD000..=0xDFFF => Instruction::Display(self.vx(), self.vy(), self.n()),
+            0xD000..=0xDFFF => Instruction::Draw(self.vx(), self.vy(), self.n()),
             0xE09E..=0xEF9E => Instruction::KeyOpVxPressed(self.vx()),
             0xE0A1..=0xEFA1 => Instruction::KeyOpVxNotPressed(self.vx()),
-            0xF0A1..=0xFFAA => Instruction::KeyOpVxNotPressed(self.vx()),
+            0xF000..=0xFFFF => match self.kk() {
+                0x07 => Instruction::SetVxEqToDt(self.vx()),
+                0x0A => Instruction::KeyOpVxNotPressed(self.vx()),
+                0x15 => Instruction::SetDtEqToVx(self.vx()),
+                _ => panic!("Uncovered OpCode {:#04x} (KK: {:#04x})", self.0, self.kk()),
+            },
             _ => panic!("OpCode: {:#04x} not supported", self.0),
         }
     }
@@ -272,7 +279,7 @@ pub enum Instruction {
     /// coordinates of the display, it wraps around to the opposite side of the
     /// screen. See instruction 8xy3 for more information on XOR, and section
     /// 2.4, Display, for more information on the Chip-8 screen and sprites.
-    Display(usize, usize, u8),
+    Draw(usize, usize, u8),
     /// `Ex9E` - SKP Vx
     /// Skip next instruction if key with the value of Vx is pressed.
     ///
@@ -289,18 +296,18 @@ pub enum Instruction {
     /// Set Vx = delay timer value.
     ///
     /// The value of DT is placed into Vx.
-    LdVxDt(usize, u8),
+    SetVxEqToDt(usize),
     /// `Fx0A` - LD Vx, K
     /// Wait for a key press, store the value of the key in Vx.
     ///
     /// All execution stops until a key is pressed, then the value of that key
     /// is stored in Vx.
-    LdVxK(usize, u8),
+    LdVxK(usize),
     /// `Fx15` - LD DT, Vx
     /// Set delay timer = Vx.
     ///
     /// DT is set equal to the value of Vx.
-    LdDtVx(usize),
+    SetDtEqToVx(usize),
     /// `Fx18` - LD ST, Vx
     /// Set sound timer = Vx.
     ///
