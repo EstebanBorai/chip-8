@@ -81,7 +81,6 @@ impl Opcode {
         match self.0 {
             0x00E0 => Instruction::Cls,
             0x00EE => Instruction::Ret,
-            0x0000..=0x0FFF => Instruction::SysAddr,
             0x1000..=0x1FFF => Instruction::Jump(self.nnn()),
             0x2000..=0x2FFF => Instruction::CallSubroutine(self.nnn()),
             0x3000..=0x3FFF => Instruction::CondEq(self.vx(), self.kk()),

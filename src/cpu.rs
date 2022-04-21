@@ -129,7 +129,10 @@ impl Cpu {
                 }
             }
             Instruction::ConstAssignVxToKk(vx, kk) => {
-                println!("ConstAssignVxToKk: VX: {:#04x} KK: {:#04x}", vx, kk);
+                println!(
+                    "ConstAssignVxToKk: VX: {:#04x} ({vx}) KK: {:#04x} ({kk})",
+                    vx, kk
+                );
                 self.registers[vx] = kk
             }
             Instruction::ConstAddVxToKk(vx, kk) => {
@@ -168,25 +171,35 @@ impl Cpu {
             Instruction::MathAdd(vx, vy) => {
                 println!("MathAdd: VX: {:#04x} VY: {:#04x}", vx, vy);
                 println!(
-                    "Registers: \n {:#04x} == {:#04x} \n {:#04x} == {:#04x}",
-                    vx, self.registers[vx], vy, self.registers[vy]
+                    "Registers: \n {:#04x} == {:#04x} ({}) \n {:#04x} == {:#04x} ({})",
+                    vx,
+                    self.registers[vx],
+                    self.registers[vx],
+                    vy,
+                    self.registers[vy],
+                    self.registers[vy]
                 );
 
                 let (result, overflows) = self.registers[vx].overflowing_add(self.registers[vy]);
 
-                self.registers[0x0F] = overflows as u8;
+                self.registers[0xF] = overflows as u8;
                 self.registers[vx] = result;
             }
             Instruction::MathSub(vx, vy) => {
                 println!("MathSub: VX: {:#04x} VY: {:#04x}", vx, vy);
                 println!(
-                    "Registers: \n {:#04x} == {:#04x} \n {:#04x} == {:#04x}",
-                    vx, self.registers[vx], vy, self.registers[vy]
+                    "Registers: \n {:#04x} == {:#04x} ({}) \n {:#04x} == {:#04x} ({})",
+                    vx,
+                    self.registers[vx],
+                    self.registers[vx],
+                    vy,
+                    self.registers[vy],
+                    self.registers[vy]
                 );
 
                 let (result, overflows) = self.registers[vx].overflowing_sub(self.registers[vy]);
 
-                self.registers[0x0F] = overflows as u8;
+                self.registers[0xF] = overflows as u8;
                 self.registers[vx] = result;
             }
             Instruction::BitOpShr(vx) => {
@@ -292,7 +305,7 @@ impl Cpu {
     fn fetch_opcode(&mut self) -> Opcode {
         let pc = self.pc as usize;
         let hexa: u16 = (self.ram[pc] as u16) << 8 | (self.ram[pc + 1] as u16);
-
+        println!("{:#04x}", hexa);
         self.pc += 2;
         Opcode::from(hexa)
     }
@@ -323,20 +336,18 @@ mod tests {
         let initial_display_buffer = cpu.display_buffer();
         let rom = vec![
             // Writes to Display Buffer
-            0xDF, 0xB8,
-        ];
-
-        cpu.load(&rom);
-        cpu.cycle();
-
-        let written_display_buffer = cpu.display_buffer();
-
-        let rom = vec![
-            // Clears Display Buffer
+            0xDF, 0xB8, // Clears Display Buffer
             0x00, 0xE0,
         ];
 
         cpu.load(&rom);
+
+        // Runs first cycle of CPU with 0xDFB8
+        cpu.cycle();
+
+        let written_display_buffer = cpu.display_buffer();
+
+        // Runs second cycle of CPU with 0x00E0
         cpu.cycle();
 
         let cleared_display_buffer = cpu.display_buffer();
@@ -345,11 +356,13 @@ mod tests {
             initial_display_buffer.0.iter().all(|x| *x == 0),
             "Initially all bytes are 0"
         );
+
         assert_ne!(
             written_display_buffer.0.iter().fold(0, |acc, x| acc + x),
             0,
             "Bytes were written"
         );
+
         assert!(
             cleared_display_buffer.0.iter().all(|x| *x == 0),
             "Bytes were cleared"
@@ -575,7 +588,7 @@ mod tests {
             "Register on 0x0A is set to 0x17 due to the result from 10 + 13"
         );
         assert_eq!(
-            cpu.registers[0xF0], 1,
+            cpu.registers[0xF], 0,
             "Register VF is set to 0 due to lack of overflow"
         );
     }
@@ -585,9 +598,9 @@ mod tests {
         let mut cpu = Cpu::new();
         let rom = vec![
             // Assigns 0x0a to 13
-            0x6A, 0x0D, // Assigns 0x0b to 10
-            0x6B, 0x0A, // Perform AND on 0x0a | 0x0b
-            0x8A, 0xB5,
+            0x6E, 0x0A, // Assigns 0x0b to 10
+            0x6D, 0x0D, // Perform on 0x0a + 0x0b
+            0x8D, 0xE5,
         ];
 
         cpu.load(&rom);
@@ -596,11 +609,11 @@ mod tests {
         cpu.cycle();
 
         assert_eq!(
-            cpu.registers[0x0a], 0x03,
+            cpu.registers[0x0d], 0x03,
             "Register on 0x0A is set to 0x03 due to the result from 13 - 10"
         );
         assert_eq!(
-            cpu.registers[0xF0], 1,
+            cpu.registers[0xF], 0,
             "Register VF is set to 0 due to lack of overflow"
         );
     }
@@ -610,9 +623,9 @@ mod tests {
         let mut cpu = Cpu::new();
         let rom = vec![
             // Assigns 0x0a to 13
-            0x6F, 0x0D, // Assigns 0x0b to 10
-            0x6F, 0x0A, // Perform on 0x0a + 0x0b
-            0x8F, 0xB5,
+            0x61, 0xFF, // Assigns 0x0b to 10
+            0x62, 0xFF, // Perform on 0x0a + 0x0b
+            0x81, 0x24,
         ];
 
         cpu.load(&rom);
@@ -621,11 +634,11 @@ mod tests {
         cpu.cycle();
 
         assert_eq!(
-            cpu.registers[0x0a], 0x03,
-            "Register on 0x0A is set to 0x03 due to the result from 13 - 10"
+            cpu.registers[0x1], 0xFE,
+            "Register on 0x0A is set to 0x00 due to the overflow"
         );
         assert_eq!(
-            cpu.registers[0xF0], 1,
+            cpu.registers[0xF], 1,
             "Register VF is set to 1 due to the overflow"
         );
     }
@@ -634,10 +647,10 @@ mod tests {
     fn instr_math_sub_with_overflow() {
         let mut cpu = Cpu::new();
         let rom = vec![
-            // Assigns 0x0a to 13
-            0x6F, 0x0D, // Assigns 0x0b to 10
-            0x6F, 0x0A, // Perform on 0x0a + 0x0b
-            0x8A, 0xB5,
+            // Assigns 0x01 to 1
+            0x61, 0x01, // Assigns 0x0d to 13
+            0x62, 0x0D, // Perform on 0x0a + 0x0b
+            0x81, 0x25,
         ];
 
         cpu.load(&rom);
@@ -646,11 +659,11 @@ mod tests {
         cpu.cycle();
 
         assert_eq!(
-            cpu.registers[0x0a], 0x03,
-            "Register on 0x0A is set to 0x03 due to the result from 13 - 10"
+            cpu.registers[0x1], 0xF4,
+            "Register on 0x01 is set to 0xF4 due to the overflow from 1 - 13"
         );
         assert_eq!(
-            cpu.registers[0xF0], 1,
+            cpu.registers[0xF], 1,
             "Register VF is set to 1 due to the overflow"
         );
     }
