@@ -1,5 +1,3 @@
-use std::{iter::Inspect, time::Instant};
-
 /// Chip8 opcodes are 16-bit hexadecimal values which represent CPU
 /// instructions. These are decoded and interpreted accordingly based on the
 /// structure of the hexadecimal value.

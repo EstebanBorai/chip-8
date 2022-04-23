@@ -4,7 +4,7 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
-use sdl2::{EventPump, Sdl};
+use sdl2::Sdl;
 
 pub const BACKGROUND_COLOR: Color = Color::RGB(u8::MIN, u8::MIN, u8::MIN);
 pub const FOREGROUND_COLOR: Color = Color::RGB(u8::MAX, u8::MAX, u8::MAX);

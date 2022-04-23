@@ -11,4 +11,7 @@ pub struct Config {
     /// ROM file to load
     #[structopt(parse(from_os_str))]
     pub rom: PathBuf,
+    /// Debug mode
+    #[structopt(short = "d", long = "debug")]
+    pub debug: bool,
 }

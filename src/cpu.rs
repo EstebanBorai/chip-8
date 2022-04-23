@@ -1,7 +1,3 @@
-use anyhow::Error;
-use std::fs;
-
-use crate::config::Config;
 use crate::display::buffer::DisplayBuffer;
 use crate::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use crate::memory::{Memory, USER_SPACE_STR};
@@ -37,19 +33,6 @@ pub struct Cpu {
 impl Default for Cpu {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl TryFrom<Config> for Cpu {
-    type Error = Error;
-
-    fn try_from(config: Config) -> Result<Self, Self::Error> {
-        let mut cpu = Cpu::new();
-        let bytes = fs::read(config.rom).map_err(|err| Error::msg(err.to_string()))?;
-
-        cpu.load(&bytes);
-
-        Ok(cpu)
     }
 }
 
