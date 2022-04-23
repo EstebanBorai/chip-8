@@ -18,12 +18,12 @@ pub struct Cpu {
     pub(crate) i: u16,
     /// Stack of 16 8-bit spaces
     pub(crate) stack: Stack,
+    /// Stack Pointer
+    pub(crate) sp: u16,
     /// General Purpose Variable Registers
     ///
     /// 16 8-bit variable registers numbered from 0 through F.
     pub(crate) registers: RegisterSet,
-    /// Sound Timer (ST)
-    pub(crate) st: u8,
     /// Delay Timer (DT)
     pub(crate) dt: u8,
     /// Display Buffer to hold bytes mapped to output display
@@ -47,7 +47,7 @@ impl Cpu {
             registers: RegisterSet::default(),
             i: 0x0000,
             stack: Stack::default(),
-            st: 0,
+            sp: 0,
             dt: 0,
             display_buffer: DisplayBuffer::default(),
         }
@@ -77,7 +77,11 @@ impl Cpu {
     pub fn execute(&mut self, instr: Instruction) {
         match instr {
             Instruction::Cls => self.display_buffer.reset(),
-            Instruction::Ret => self.pc = self.stack.pop().expect("Out of bounds!"),
+            Instruction::Ret(address) => {
+                self.sp += 1;
+                self.stack[self.sp as usize] = self.pc as u16;
+                self.pc = address;
+            }
             Instruction::SysAddr => println!("WARN: COSMAC VIP Only Instruction. Skipping."),
             Instruction::Jump(address) => self.pc = address,
             Instruction::CallSubroutine(address) => {
@@ -212,7 +216,7 @@ impl Cpu {
             }
             Instruction::Mem(nnn) => {
                 println!("Mem: NNN: {:#04x}", nnn);
-                self.i = nnn;
+                self.pc = nnn;
             }
             Instruction::Draw(vx, vy, n) => {
                 println!("Draw: VX: {:#04x} VY: {:#04x} N: {:#04x}", vx, vy, n);

@@ -55,6 +55,8 @@ impl Display {
                     .unwrap();
             }
         }
+
+        self.canvas.present();
     }
 
     fn make_rectangle(&self, col: u32, row: u32) -> Rect {

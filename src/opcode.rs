@@ -44,18 +44,6 @@
 pub struct Opcode(u16);
 
 impl Opcode {
-    pub fn n(&self) -> u8 {
-        (self.0 & 0x000F) as u8
-    }
-
-    pub fn vx(&self) -> usize {
-        ((self.0 & 0x0F00) >> 8) as usize
-    }
-
-    pub fn vy(&self) -> usize {
-        ((self.0 & 0x00F0) >> 4) as usize
-    }
-
     pub fn c(&self) -> u8 {
         ((self.0 & 0xF000) >> 12) as u8
     }
@@ -68,50 +56,74 @@ impl Opcode {
         (self.0 & 0x00FF) as u8
     }
 
+    pub fn n(&self) -> u8 {
+        (self.0 & 0x000F) as u8
+    }
+
     pub fn nnn(&self) -> u16 {
         self.0 & 0x0FFF
+    }
+
+    pub fn vx(&self) -> usize {
+        ((self.0 & 0x0F00) >> 8) as usize
+    }
+
+    pub fn vy(&self) -> usize {
+        ((self.0 & 0x00F0) >> 4) as usize
     }
 
     /// Decodes a `Opcode` as hexadecimal as an `Instruction` which can be
     /// processed by the CPU.
     pub fn decode(&self) -> Instruction {
-        println!("Decoding: {:#04x}", self.0);
-        match self.0 {
-            0x00E0 => Instruction::Cls,
-            0x00EE => Instruction::Ret,
-            0x1000..=0x1FFF => Instruction::Jump(self.nnn()),
-            0x2000..=0x2FFF => Instruction::CallSubroutine(self.nnn()),
-            0x3000..=0x3FFF => Instruction::CondEq(self.vx(), self.kk()),
-            0x4000..=0x4FFF => Instruction::CondNotEq(self.vx(), self.kk()),
-            0x5000..=0x5FFF => Instruction::CondEqVxVy(self.vx(), self.vy()),
-            0x6000..=0x6FFF => Instruction::ConstAssignVxToKk(self.vx(), self.kk()),
-            0x7000..=0x7FFF => Instruction::ConstAddVxToKk(self.vx(), self.kk()),
-            0x8000..=0x8FFF => match self.n() {
-                0x00 => Instruction::AssignVxToVy(self.vx(), self.vy()),
-                0x01 => Instruction::BitOpOr(self.vx(), self.vy()),
-                0x02 => Instruction::BitOpAnd(self.vx(), self.vy()),
-                0x03 => Instruction::BitOpXor(self.vx(), self.vy()),
-                0x04 => Instruction::MathAdd(self.vx(), self.vy()),
-                0x05 => Instruction::MathSub(self.vx(), self.vy()),
-                0x06 => Instruction::BitOpShr(self.vx()),
-                0x07 => Instruction::MathSubVyVx(self.vx(), self.vy()),
-                0x0E => Instruction::BitOpShl(self.vx()),
-                _ => panic!("Uncovered OpCode {:#04x} (N: {:#04x})", self.0, self.n()),
-            },
-            0x9000..=0x9FFF => Instruction::CondVxNotEqVy(self.vx(), self.vy()),
-            0xA000..=0xAFFF => Instruction::Mem(self.nnn()),
-            0xB000..=0xBFFF => Instruction::JumpPcV0(self.nnn()),
-            0xC000..=0xCFFF => Instruction::Rand(self.vx(), self.kk()),
-            0xD000..=0xDFFF => Instruction::Draw(self.vx(), self.vy(), self.n()),
-            0xE09E..=0xEF9E => Instruction::KeyOpVxPressed(self.vx()),
-            0xE0A1..=0xEFA1 => Instruction::KeyOpVxNotPressed(self.vx()),
-            0xF000..=0xFFFF => match self.kk() {
-                0x07 => Instruction::SetVxEqToDt(self.vx()),
-                0x0A => Instruction::KeyOpVxNotPressed(self.vx()),
-                0x15 => Instruction::SetDtEqToVx(self.vx()),
-                _ => panic!("Uncovered OpCode {:#04x} (KK: {:#04x})", self.0, self.kk()),
-            },
-            _ => panic!("OpCode: {:#04x} not supported", self.0),
+        let nibbles = (
+            (self.0 & 0xF000) >> 12 as u8,
+            (self.0 & 0x0F00) >> 8 as u8,
+            (self.0 & 0x00F0) >> 4 as u8,
+            (self.0 & 0x000F) as u8,
+        );
+
+        let nnn = (self.0 & 0x0FFF) as u16;
+        let kk = (self.0 & 0x00FF) as u8;
+        let vx = nibbles.1 as usize;
+        let vy = nibbles.2 as usize;
+        let n = nibbles.3 as u8;
+
+        match nibbles {
+            (0x00, 0x00, 0x0e, 0x00) => Instruction::Cls,
+            (0x00, 0x00, 0x0e, 0x0e) => Instruction::Ret(nnn),
+            (0x01, _, _, _) => Instruction::Jump(nnn),
+            (0x02, _, _, _) => Instruction::CallSubroutine(nnn),
+            (0x03, _, _, _) => Instruction::CondEq(vx, kk),
+            (0x04, _, _, _) => Instruction::CondNotEq(vx, kk),
+            (0x05, _, _, 0x00) => Instruction::CondEqVxVy(vx, vy),
+            (0x06, _, _, _) => Instruction::ConstAssignVxToKk(vx, kk),
+            (0x07, _, _, _) => Instruction::ConstAddVxToKk(vx, kk),
+            (0x08, _, _, 0x00) => Instruction::AssignVxToVy(vx, vy),
+            (0x08, _, _, 0x01) => Instruction::BitOpOr(vx, vy),
+            (0x08, _, _, 0x02) => Instruction::BitOpAnd(vx, vy),
+            (0x08, _, _, 0x03) => Instruction::BitOpXor(vx, vy),
+            (0x08, _, _, 0x04) => Instruction::MathAdd(vx, vy),
+            (0x08, _, _, 0x05) => Instruction::MathSub(vx, vy),
+            (0x08, _, _, 0x06) => Instruction::BitOpShr(vx),
+            (0x08, _, _, 0x07) => Instruction::MathSubVyVx(vx, vy),
+            (0x08, _, _, 0x0E) => Instruction::BitOpShl(vx),
+            (0x09, _, _, 0x00) => Instruction::CondVxNotEqVy(vx, vy),
+            (0x0A, _, _, _) => Instruction::Mem(nnn),
+            (0x0B, _, _, _) => Instruction::JumpPcV0(nnn),
+            (0x0C, _, _, _) => Instruction::Rand(vx, kk),
+            (0x0D, _, _, _) => Instruction::Draw(vx, vy, n),
+            (0x0E, _, 0x09, 0x0E) => Instruction::KeyOpVxPressed(vx),
+            (0x0E, _, 0x0A, 0x01) => Instruction::KeyOpVxNotPressed(vx),
+            (0x0F, _, 0x00, 0x07) => Instruction::SetVxEqToDt(vx),
+            (0x0F, _, 0x00, 0x0A) => Instruction::KeyOpVxNotPressed(vx),
+            (0x0F, _, 0x01, 0x05) => Instruction::SetDtEqToVx(vx),
+            (0x0F, _, 0x01, 0x08) => Instruction::SetStEqToVx(vx),
+            (0x0F, _, 0x01, 0x0E) => Instruction::SetIEqToIPlusVx(vx),
+            (0x0F, _, 0x02, 0x09) => Instruction::SetIEqToVx(vx),
+            (0x0F, _, 0x03, 0x03) => Instruction::StoreBcd(vx),
+            (0x0F, _, 0x05, 0x05) => Instruction::SetRegsInI(vx),
+            (0x0F, _, 0x06, 0x05) => Instruction::GetRegsInI(vx),
+            _ => panic!("Unsupported OpCode {:#04x}", self.0),
         }
     }
 }
@@ -140,7 +152,7 @@ pub enum Instruction {
     ///
     /// The interpreter sets the program counter to the address at the top of
     /// the stack, then subtracts 1 from the stack pointer.
-    Ret,
+    Ret(u16),
     /// `1nnn` - JP addr
     /// Jump to location `nnn`.
     ///
@@ -309,38 +321,38 @@ pub enum Instruction {
     /// Set sound timer = Vx.
     ///
     /// ST is set equal to the value of Vx.
-    LdStVx(usize),
+    SetStEqToVx(usize),
     /// `Fx1E` - ADD I, Vx
     /// Set I = I + Vx.
     ///
     /// The values of I and Vx are added, and the results are stored in I.
-    AddIVx,
+    SetIEqToIPlusVx(usize),
     /// `Fx29` - LD F, Vx
     /// Set I = location of sprite for digit Vx.
     ///
     /// The value of I is set to the location for the hexadecimal sprite
     /// corresponding to the value of Vx. See section 2.4, Display, for more
     /// information on the Chip-8 hexadecimal font.
-    LdFVx,
+    SetIEqToVx(usize),
     /// `Fx33` - LD B, Vx
     /// Store BCD representation of Vx in memory locations I, I+1, and I+2.
     ///
     /// The interpreter takes the decimal value of Vx, and places the hundreds
     /// digit in memory at location in I, the tens digit at location I+1, and
     /// the ones digit at location I+2.
-    LdBVx,
+    StoreBcd(usize),
     /// `Fx55` - LD [I], Vx
     /// Store registers V0 through Vx in memory starting at location I.
     ///
     /// The interpreter copies the values of registers V0 through Vx into
     /// memory, starting at the address in I.
-    LdIVx,
+    SetRegsInI(usize),
     /// `Fx65` - LD Vx, [I]
     /// Read registers V0 through Vx from memory starting at location I.
     ///
     /// The interpreter reads values from memory starting at location I into
     /// registers V0 through Vx.
-    LdVxI,
+    GetRegsInI(usize),
 }
 
 #[cfg(test)]

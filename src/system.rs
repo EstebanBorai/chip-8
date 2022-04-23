@@ -1,7 +1,7 @@
 use anyhow::Error;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::{EventPump, Sdl};
+use sdl2::EventPump;
 use std::fs;
 
 use crate::config::Config;
@@ -13,7 +13,6 @@ pub struct System {
     cpu: Cpu,
     display: Display,
     event_pump: EventPump,
-    sdl: Sdl,
 }
 
 impl System {
@@ -33,7 +32,6 @@ impl System {
             cpu,
             display,
             event_pump,
-            sdl,
         }
     }
 
