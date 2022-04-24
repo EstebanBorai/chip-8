@@ -26,20 +26,12 @@ impl Index<usize> for DisplayBuffer {
     type Output = u8;
 
     fn index(&self, index: usize) -> &Self::Output {
-        // println!(
-        //     "DisplayBufferAccess ==> Addr: {:#04x} <-> Value: {:#04x}",
-        //     index, self.0[index]
-        // );
         &self.0[index]
     }
 }
 
 impl IndexMut<usize> for DisplayBuffer {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        // println!(
-        //     "MutDisplayBufferAccess ==> Addr: {:#04x} <-> Value: {:#04x}",
-        //     index, self.0[index]
-        // );
         &mut self.0[index]
     }
 }

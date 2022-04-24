@@ -21,3 +21,9 @@ impl Rom {
         self.0.as_slice()
     }
 }
+
+impl From<Vec<u8>> for Rom {
+    fn from(bytes: Vec<u8>) -> Self {
+        Rom(bytes)
+    }
+}

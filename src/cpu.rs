@@ -8,6 +8,11 @@ use crate::stack::Stack;
 
 pub const CLOCK_RATE: f32 = 600.0;
 
+pub struct CycleOutput {
+    pub display_buffer: DisplayBuffer,
+    pub display_update: bool,
+}
+
 pub struct Cpu {
     /// System available memory.
     pub(crate) ram: Memory,
@@ -52,10 +57,6 @@ impl Cpu {
         }
     }
 
-    pub fn display_buffer(&self) -> DisplayBuffer {
-        self.display_buffer
-    }
-
     /// Loads ROM bytes into memory
     pub fn load(&mut self, rom: Rom) {
         self.ram.load(rom.bytes());
@@ -65,11 +66,26 @@ impl Cpu {
     ///
     /// First fetches the next instruction pointed out by the PC, then decodes
     /// the instruction and finally executes the instruction.
-    pub fn cycle(&mut self) {
+    pub fn cycle(&mut self) -> CycleOutput {
+        let mut display_update = false;
+
+        if self.dt > 0 {
+            self.dt -= 1;
+        }
+
         let opcode = self.fetch_opcode();
         let instr = opcode.decode();
 
+        if matches!(instr, Instruction::Cls) || matches!(instr, Instruction::Draw(_, _, _)) {
+            display_update = true;
+        }
+
         self.execute(instr);
+
+        CycleOutput {
+            display_buffer: self.display_buffer.clone(),
+            display_update,
+        }
     }
 
     /// Executes the provided instruction
@@ -85,7 +101,8 @@ impl Cpu {
             Instruction::SysAddr => println!("WARN: COSMAC VIP Only Instruction. Skipping."),
             Instruction::Jump(address) => self.pc = address,
             Instruction::CallSubroutine(address) => {
-                self.stack.push(self.pc);
+                self.stack[self.sp as usize] = self.pc + 2;
+                self.sp += 1;
                 self.pc = address;
             }
             Instruction::CondEq(vx, kk) => {
@@ -309,7 +326,7 @@ mod tests {
         let mut cpu = Cpu::new();
         let rom = vec![0x001, 0x002, 0x003, 0x004];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
 
         assert_eq!(cpu.ram[USER_SPACE_STR], 0x001);
         assert_eq!(cpu.ram[USER_SPACE_STR + 1], 0x002);
@@ -320,24 +337,24 @@ mod tests {
     #[test]
     fn instr_cls() {
         let mut cpu = Cpu::new();
-        let initial_display_buffer = cpu.display_buffer();
+        let initial_display_buffer = cpu.display_buffer;
         let rom = vec![
             // Writes to Display Buffer
             0xDF, 0xB8, // Clears Display Buffer
             0x00, 0xE0,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
 
         // Runs first cycle of CPU with 0xDFB8
         cpu.cycle();
 
-        let written_display_buffer = cpu.display_buffer();
+        let written_display_buffer = cpu.display_buffer;
 
         // Runs second cycle of CPU with 0x00E0
         cpu.cycle();
 
-        let cleared_display_buffer = cpu.display_buffer();
+        let cleared_display_buffer = cpu.display_buffer;
 
         assert!(
             initial_display_buffer.0.iter().all(|x| *x == 0),
@@ -365,7 +382,7 @@ mod tests {
             0x00, 0xEE,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
         cpu.cycle();
     }
@@ -375,7 +392,7 @@ mod tests {
         let mut cpu = Cpu::new();
         let rom = vec![0x12, 0xCD];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
 
         assert_eq!(cpu.pc, 0x2CD, "Jump to address on NNN");
@@ -386,7 +403,7 @@ mod tests {
         let mut cpu = Cpu::new();
         let rom = vec![0x21, 0x23];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
 
         assert_eq!(
@@ -406,7 +423,7 @@ mod tests {
             0x02,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
         cpu.cycle();
 
@@ -422,7 +439,7 @@ mod tests {
         let mut cpu = Cpu::new();
         let rom = vec![0x32, 0x04];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
 
         assert_eq!(
@@ -441,7 +458,7 @@ mod tests {
             0x51, 0x11,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
         cpu.cycle();
 
@@ -460,7 +477,7 @@ mod tests {
             0x6B, 0x0B,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
 
         assert_eq!(
@@ -478,7 +495,7 @@ mod tests {
             0x8B, 0xA0,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
         cpu.cycle();
 
@@ -502,7 +519,7 @@ mod tests {
             0x8A, 0xB1,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
         cpu.cycle();
         cpu.cycle();
@@ -523,7 +540,7 @@ mod tests {
             0x8A, 0xB2,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
         cpu.cycle();
         cpu.cycle();
@@ -544,7 +561,7 @@ mod tests {
             0x8A, 0xB3,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
         cpu.cycle();
         cpu.cycle();
@@ -565,7 +582,7 @@ mod tests {
             0x8A, 0xB4,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
         cpu.cycle();
         cpu.cycle();
@@ -590,7 +607,7 @@ mod tests {
             0x8D, 0xE5,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
         cpu.cycle();
         cpu.cycle();
@@ -615,7 +632,7 @@ mod tests {
             0x81, 0x24,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
         cpu.cycle();
         cpu.cycle();
@@ -640,7 +657,7 @@ mod tests {
             0x81, 0x25,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
         cpu.cycle();
         cpu.cycle();
@@ -664,7 +681,7 @@ mod tests {
             0x8A, 0xB6,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
         cpu.cycle();
 
@@ -683,7 +700,7 @@ mod tests {
             0x8A, 0xA7,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
         cpu.cycle();
 
@@ -702,7 +719,7 @@ mod tests {
             0x8A, 0xBE,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
         cpu.cycle();
 
@@ -723,7 +740,7 @@ mod tests {
             0x9A, 0xB0,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
         cpu.cycle();
         cpu.cycle();
@@ -743,7 +760,7 @@ mod tests {
             0xA1, 0x23,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
 
         assert_eq!(cpu.i, 0x0123, "Index register is set to 0x0123");
@@ -760,7 +777,7 @@ mod tests {
             0xFA, 0x07,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
 
         assert_eq!(
@@ -780,7 +797,7 @@ mod tests {
             0xFA, 0x15,
         ];
 
-        cpu.load(&rom);
+        cpu.load(rom.into());
         cpu.cycle();
 
         assert_eq!(

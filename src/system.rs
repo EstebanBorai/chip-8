@@ -19,7 +19,7 @@ impl System {
         let mut cpu = Cpu::new();
         let sdl = sdl2::init().unwrap();
         let event_pump = sdl.event_pump().unwrap();
-        let display = Display::new(&sdl, "Chip8", 2);
+        let display = Display::new(&sdl, "Chip8", 12);
         let rom = Rom::from_path(&config.rom);
 
         cpu.load(rom);
@@ -57,8 +57,13 @@ impl System {
                 }
             }
 
-            self.cpu.cycle();
-            self.display.render(&self.cpu.display_buffer);
+            let output = self.cpu.cycle();
+
+            if output.display_update {
+                self.display.render(&output.display_buffer);
+            }
+
+            std::thread::sleep(std::time::Duration::from_millis(2));
         }
     }
 
@@ -83,6 +88,14 @@ impl System {
                     _ => {}
                 }
             }
+
+            let output = self.cpu.cycle();
+
+            if output.display_update {
+                self.display.render(&output.display_buffer);
+            }
+
+            std::thread::sleep(std::time::Duration::from_millis(2));
         }
     }
 }
