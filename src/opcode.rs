@@ -44,30 +44,37 @@
 pub struct Opcode(u16);
 
 impl Opcode {
+    #[inline(always)]
     pub fn c(&self) -> u8 {
         ((self.0 & 0xF000) >> 12) as u8
     }
 
+    #[inline(always)]
     pub fn d(&self) -> u8 {
         (self.0 & 0x000F) as u8
     }
 
+    #[inline(always)]
     pub fn kk(&self) -> u8 {
         (self.0 & 0x00FF) as u8
     }
 
+    #[inline(always)]
     pub fn n(&self) -> u8 {
         (self.0 & 0x000F) as u8
     }
 
+    #[inline(always)]
     pub fn nnn(&self) -> u16 {
         self.0 & 0x0FFF
     }
 
+    #[inline(always)]
     pub fn vx(&self) -> usize {
         ((self.0 & 0x0F00) >> 8) as usize
     }
 
+    #[inline(always)]
     pub fn vy(&self) -> usize {
         ((self.0 & 0x00F0) >> 4) as usize
     }
