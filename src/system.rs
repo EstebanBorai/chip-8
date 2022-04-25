@@ -5,13 +5,14 @@ use sdl2::EventPump;
 use crate::config::Config;
 use crate::cpu::Cpu;
 use crate::display::Display;
+use crate::keypad::Keypad;
 use crate::rom::Rom;
 
 pub struct System {
     config: Config,
     cpu: Cpu,
     display: Display,
-    event_pump: EventPump,
+    keypad: Keypad,
 }
 
 impl System {
@@ -20,6 +21,7 @@ impl System {
         let sdl = sdl2::init().unwrap();
         let event_pump = sdl.event_pump().unwrap();
         let display = Display::new(&sdl, "Chip8", 12);
+        let keypad = Keypad::new(event_pump);
         let rom = Rom::from_path(&config.rom);
 
         cpu.load(rom);
@@ -28,74 +30,19 @@ impl System {
             config,
             cpu,
             display,
-            event_pump,
+            keypad,
         }
     }
 
-    pub fn start(self) {
-        if self.config.debug {
-            self.start_debugging();
-        } else {
-            self.start_not_debugging();
-        }
+    pub fn start(mut self) {
+        while let Ok(pressed_keys) = self.keypad.poll() {
+            let cycle_output = self.cpu.cycle(pressed_keys);
 
-        println!("Chip8 Exiting");
-    }
-
-    fn start_not_debugging(mut self) {
-        'chip8: loop {
-            for event in self.event_pump.poll_iter() {
-                match event {
-                    Event::Quit { .. }
-                    | Event::KeyDown {
-                        keycode: Some(Keycode::Escape),
-                        ..
-                    } => {
-                        break 'chip8;
-                    }
-                    _ => {}
-                }
+            if cycle_output.display_update {
+                self.display.render(&cycle_output.display_buffer);
             }
 
-            let output = self.cpu.cycle();
-
-            if output.display_update {
-                self.display.render(&output.display_buffer);
-            }
-
-            std::thread::sleep(std::time::Duration::from_millis(2));
-        }
-    }
-
-    fn start_debugging(mut self) {
-        'chip8: loop {
-            for event in self.event_pump.poll_iter() {
-                match event {
-                    Event::Quit { .. }
-                    | Event::KeyDown {
-                        keycode: Some(Keycode::Escape),
-                        ..
-                    } => {
-                        break 'chip8;
-                    }
-                    Event::KeyDown {
-                        keycode: Some(Keycode::Space),
-                        ..
-                    } => {
-                        self.cpu.cycle();
-                        self.display.render(&self.cpu.display_buffer);
-                    }
-                    _ => {}
-                }
-            }
-
-            let output = self.cpu.cycle();
-
-            if output.display_update {
-                self.display.render(&output.display_buffer);
-            }
-
-            std::thread::sleep(std::time::Duration::from_millis(2));
+            std::thread::sleep(std::time::Duration::from_millis(500));
         }
     }
 }

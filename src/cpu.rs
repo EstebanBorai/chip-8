@@ -1,5 +1,8 @@
+use sdl2::keyboard;
+
 use crate::display::buffer::DisplayBuffer;
 use crate::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
+use crate::keypad::KeypadState;
 use crate::memory::{Memory, USER_SPACE_STR};
 use crate::opcode::{Instruction, Opcode};
 use crate::register_set::RegisterSet;
@@ -32,6 +35,8 @@ pub struct Cpu {
     pub(crate) dt: u8,
     /// Display Buffer to hold bytes mapped to output display
     pub(crate) display_buffer: DisplayBuffer,
+    /// Keys pressed at the moment of the cycle execution
+    pub(crate) keypad_state: KeypadState,
 }
 
 impl Default for Cpu {
@@ -54,6 +59,7 @@ impl Cpu {
             sp: 0,
             dt: 0,
             display_buffer: DisplayBuffer::default(),
+            keypad_state: [false; 16],
         }
     }
 
@@ -66,8 +72,10 @@ impl Cpu {
     ///
     /// First fetches the next instruction pointed out by the PC, then decodes
     /// the instruction and finally executes the instruction.
-    pub fn cycle(&mut self) -> CycleOutput {
+    pub fn cycle(&mut self, keypad_state: KeypadState) -> CycleOutput {
         let mut display_update = false;
+
+        self.keypad_state = keypad_state;
 
         if self.dt > 0 {
             self.dt -= 1;
