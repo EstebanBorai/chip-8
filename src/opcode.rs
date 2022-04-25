@@ -1,146 +1,3 @@
-/// Chip8 opcodes are 16-bit hexadecimal values which represent CPU
-/// instructions. These are decoded and interpreted accordingly based on the
-/// structure of the hexadecimal value.
-///
-/// # Anatomy of a Chip8 Opcode
-///
-/// The 16-bit value can be unpacked into 2 bytes, the High Byte and the
-/// Low Byte. These 2 bytes can also be represented as 4 nibbles (4-bit values),
-/// each byte would also contain a High Nibble and a Low Nibble.
-///
-/// ```ignore
-///      HB  LB
-///     _^_ _^_
-/// 0 x 1 2 C D
-///     | | | |_ Low nibble
-///     | | |___ High nibble
-///     | |_____ Low nibble
-///     |_______ High nibble
-///
-/// HB: High-Byte
-/// LB: Low-Byte
-/// ```
-///
-/// # Opcode Variables
-///
-/// An opcode can hold variables, based on the opcode purpose a byte or nibble
-/// could represent a value for the purpose of the instruction the opcode is
-/// intended to execute. For instance, the `0x1NNN` opcode holds the variable
-/// `NNN` which represents a memory address.
-///
-/// ```ignore
-/// |  Variable  |                Position             |     Description     |
-/// |------------|-------------------------------------|---------------------|
-/// | n          | Low Byte, Low Nibble                | Number of bytes     |
-/// | vx         | High Byte, Low Nibble               | CPU Register        |
-/// | vy         | Low Byte, High Nibble               | CPU Register        |
-/// | c          | High Byte, High Nibble              | Opcode Group        |
-/// | d          | Low Byte, Low Nibble                | Opcode Subgroup     |
-/// | kk         | Low Byte                            | Integer             |
-/// | nnn        | High Byte, Low Nibble and Low Byte  | Memory Address      |
-/// ```
-///
-/// Refer: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#3.0
-pub struct Opcode(u16);
-
-impl Opcode {
-    #[inline(always)]
-    pub fn c(&self) -> u8 {
-        ((self.0 & 0xF000) >> 12) as u8
-    }
-
-    #[inline(always)]
-    pub fn d(&self) -> u8 {
-        (self.0 & 0x000F) as u8
-    }
-
-    #[inline(always)]
-    pub fn kk(&self) -> u8 {
-        (self.0 & 0x00FF) as u8
-    }
-
-    #[inline(always)]
-    pub fn n(&self) -> u8 {
-        (self.0 & 0x000F) as u8
-    }
-
-    #[inline(always)]
-    pub fn nnn(&self) -> u16 {
-        self.0 & 0x0FFF
-    }
-
-    #[inline(always)]
-    pub fn vx(&self) -> usize {
-        ((self.0 & 0x0F00) >> 8) as usize
-    }
-
-    #[inline(always)]
-    pub fn vy(&self) -> usize {
-        ((self.0 & 0x00F0) >> 4) as usize
-    }
-
-    /// Decodes a `Opcode` as hexadecimal as an `Instruction` which can be
-    /// processed by the CPU.
-    pub fn decode(&self) -> Instruction {
-        let nibbles = (
-            (self.0 & 0xF000) >> 12 as u8,
-            (self.0 & 0x0F00) >> 8 as u8,
-            (self.0 & 0x00F0) >> 4 as u8,
-            (self.0 & 0x000F) as u8,
-        );
-
-        let nnn = (self.0 & 0x0FFF) as u16;
-        let kk = (self.0 & 0x00FF) as u8;
-        let vx = nibbles.1 as usize;
-        let vy = nibbles.2 as usize;
-        let n = nibbles.3 as u8;
-
-        match nibbles {
-            (0x00, 0x00, 0x0e, 0x00) => Instruction::Cls,
-            (0x00, 0x00, 0x0e, 0x0e) => Instruction::Ret(nnn),
-            (0x01, _, _, _) => Instruction::Jump(nnn),
-            (0x02, _, _, _) => Instruction::CallSubroutine(nnn),
-            (0x03, _, _, _) => Instruction::CondEq(vx, kk),
-            (0x04, _, _, _) => Instruction::CondNotEq(vx, kk),
-            (0x05, _, _, 0x00) => Instruction::CondEqVxVy(vx, vy),
-            (0x06, _, _, _) => Instruction::ConstAssignVxToKk(vx, kk),
-            (0x07, _, _, _) => Instruction::ConstAddVxToKk(vx, kk),
-            (0x08, _, _, 0x00) => Instruction::AssignVxToVy(vx, vy),
-            (0x08, _, _, 0x01) => Instruction::BitOpOr(vx, vy),
-            (0x08, _, _, 0x02) => Instruction::BitOpAnd(vx, vy),
-            (0x08, _, _, 0x03) => Instruction::BitOpXor(vx, vy),
-            (0x08, _, _, 0x04) => Instruction::MathAdd(vx, vy),
-            (0x08, _, _, 0x05) => Instruction::MathSub(vx, vy),
-            (0x08, _, _, 0x06) => Instruction::BitOpShr(vx),
-            (0x08, _, _, 0x07) => Instruction::MathSubVyVx(vx, vy),
-            (0x08, _, _, 0x0E) => Instruction::BitOpShl(vx),
-            (0x09, _, _, 0x00) => Instruction::CondVxNotEqVy(vx, vy),
-            (0x0A, _, _, _) => Instruction::Mem(nnn),
-            (0x0B, _, _, _) => Instruction::JumpPcV0(nnn),
-            (0x0C, _, _, _) => Instruction::Rand(vx, kk),
-            (0x0D, _, _, _) => Instruction::Draw(vx, vy, n),
-            (0x0E, _, 0x09, 0x0E) => Instruction::KeyOpVxPressed(vx),
-            (0x0E, _, 0x0A, 0x01) => Instruction::KeyOpVxNotPressed(vx),
-            (0x0F, _, 0x00, 0x07) => Instruction::SetVxEqToDt(vx),
-            (0x0F, _, 0x00, 0x0A) => Instruction::KeyOpVxNotPressed(vx),
-            (0x0F, _, 0x01, 0x05) => Instruction::SetDtEqToVx(vx),
-            (0x0F, _, 0x01, 0x08) => Instruction::SetStEqToVx(vx),
-            (0x0F, _, 0x01, 0x0E) => Instruction::SetIEqToIPlusVx(vx),
-            (0x0F, _, 0x02, 0x09) => Instruction::SetIEqToVx(vx),
-            (0x0F, _, 0x03, 0x03) => Instruction::StoreBcd(vx),
-            (0x0F, _, 0x05, 0x05) => Instruction::SetRegsInI(vx),
-            (0x0F, _, 0x06, 0x05) => Instruction::GetRegsInI(vx),
-            _ => Instruction::Ignore(self.0),
-        }
-    }
-}
-
-impl From<u16> for Opcode {
-    fn from(hexa: u16) -> Self {
-        Opcode(hexa)
-    }
-}
-
 /// CPU Executable Instructions
 ///
 /// Refer: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#3.1
@@ -160,7 +17,7 @@ pub enum Instruction {
     ///
     /// The interpreter sets the program counter to the address at the top of
     /// the stack, then subtracts 1 from the stack pointer.
-    Ret(u16),
+    Ret,
     /// `1nnn` - JP addr
     /// Jump to location `nnn`.
     ///
@@ -361,6 +218,149 @@ pub enum Instruction {
     /// The interpreter reads values from memory starting at location I into
     /// registers V0 through Vx.
     GetRegsInI(usize),
+}
+
+/// Chip8 opcodes are 16-bit hexadecimal values which represent CPU
+/// instructions. These are decoded and interpreted accordingly based on the
+/// structure of the hexadecimal value.
+///
+/// # Anatomy of a Chip8 Opcode
+///
+/// The 16-bit value can be unpacked into 2 bytes, the High Byte and the
+/// Low Byte. These 2 bytes can also be represented as 4 nibbles (4-bit values),
+/// each byte would also contain a High Nibble and a Low Nibble.
+///
+/// ```ignore
+///      HB  LB
+///     _^_ _^_
+/// 0 x 1 2 C D
+///     | | | |_ Low nibble
+///     | | |___ High nibble
+///     | |_____ Low nibble
+///     |_______ High nibble
+///
+/// HB: High-Byte
+/// LB: Low-Byte
+/// ```
+///
+/// # Opcode Variables
+///
+/// An opcode can hold variables, based on the opcode purpose a byte or nibble
+/// could represent a value for the purpose of the instruction the opcode is
+/// intended to execute. For instance, the `0x1NNN` opcode holds the variable
+/// `NNN` which represents a memory address.
+///
+/// ```ignore
+/// |  Variable  |                Position             |     Description     |
+/// |------------|-------------------------------------|---------------------|
+/// | n          | Low Byte, Low Nibble                | Number of bytes     |
+/// | vx         | High Byte, Low Nibble               | CPU Register        |
+/// | vy         | Low Byte, High Nibble               | CPU Register        |
+/// | c          | High Byte, High Nibble              | Opcode Group        |
+/// | d          | Low Byte, Low Nibble                | Opcode Subgroup     |
+/// | kk         | Low Byte                            | Integer             |
+/// | nnn        | High Byte, Low Nibble and Low Byte  | Memory Address      |
+/// ```
+///
+/// Refer: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#3.0
+pub struct Opcode(u16);
+
+impl Opcode {
+    #[inline(always)]
+    pub fn c(&self) -> u8 {
+        ((self.0 & 0xF000) >> 12) as u8
+    }
+
+    #[inline(always)]
+    pub fn d(&self) -> u8 {
+        (self.0 & 0x000F) as u8
+    }
+
+    #[inline(always)]
+    pub fn kk(&self) -> u8 {
+        (self.0 & 0x00FF) as u8
+    }
+
+    #[inline(always)]
+    pub fn n(&self) -> u8 {
+        (self.0 & 0x000F) as u8
+    }
+
+    #[inline(always)]
+    pub fn nnn(&self) -> u16 {
+        self.0 & 0x0FFF
+    }
+
+    #[inline(always)]
+    pub fn vx(&self) -> usize {
+        ((self.0 & 0x0F00) >> 8) as usize
+    }
+
+    #[inline(always)]
+    pub fn vy(&self) -> usize {
+        ((self.0 & 0x00F0) >> 4) as usize
+    }
+
+    /// Decodes a `Opcode` as hexadecimal as an `Instruction` which can be
+    /// processed by the CPU.
+    pub fn decode(&self) -> Instruction {
+        let nibbles = (
+            (self.0 & 0xF000) >> 12 as u8,
+            (self.0 & 0x0F00) >> 8 as u8,
+            (self.0 & 0x00F0) >> 4 as u8,
+            (self.0 & 0x000F) as u8,
+        );
+
+        let nnn = (self.0 & 0x0FFF) as u16;
+        let kk = (self.0 & 0x00FF) as u8;
+        let vx = nibbles.1 as usize;
+        let vy = nibbles.2 as usize;
+        let n = nibbles.3 as u8;
+
+        match nibbles {
+            (0x00, 0x00, 0x0e, 0x00) => Instruction::Cls,
+            (0x00, 0x00, 0x0e, 0x0e) => Instruction::Ret,
+            (0x01, _, _, _) => Instruction::Jump(nnn),
+            (0x02, _, _, _) => Instruction::CallSubroutine(nnn),
+            (0x03, _, _, _) => Instruction::CondEq(vx, kk),
+            (0x04, _, _, _) => Instruction::CondNotEq(vx, kk),
+            (0x05, _, _, 0x00) => Instruction::CondEqVxVy(vx, vy),
+            (0x06, _, _, _) => Instruction::ConstAssignVxToKk(vx, kk),
+            (0x07, _, _, _) => Instruction::ConstAddVxToKk(vx, kk),
+            (0x08, _, _, 0x00) => Instruction::AssignVxToVy(vx, vy),
+            (0x08, _, _, 0x01) => Instruction::BitOpOr(vx, vy),
+            (0x08, _, _, 0x02) => Instruction::BitOpAnd(vx, vy),
+            (0x08, _, _, 0x03) => Instruction::BitOpXor(vx, vy),
+            (0x08, _, _, 0x04) => Instruction::MathAdd(vx, vy),
+            (0x08, _, _, 0x05) => Instruction::MathSub(vx, vy),
+            (0x08, _, _, 0x06) => Instruction::BitOpShr(vx),
+            (0x08, _, _, 0x07) => Instruction::MathSubVyVx(vx, vy),
+            (0x08, _, _, 0x0E) => Instruction::BitOpShl(vx),
+            (0x09, _, _, 0x00) => Instruction::CondVxNotEqVy(vx, vy),
+            (0x0A, _, _, _) => Instruction::Mem(nnn),
+            (0x0B, _, _, _) => Instruction::JumpPcV0(nnn),
+            (0x0C, _, _, _) => Instruction::Rand(vx, kk),
+            (0x0D, _, _, _) => Instruction::Draw(vx, vy, n),
+            (0x0E, _, 0x09, 0x0E) => Instruction::KeyOpVxPressed(vx),
+            (0x0E, _, 0x0A, 0x01) => Instruction::KeyOpVxNotPressed(vx),
+            (0x0F, _, 0x00, 0x07) => Instruction::SetVxEqToDt(vx),
+            (0x0F, _, 0x00, 0x0A) => Instruction::KeyOpVxNotPressed(vx),
+            (0x0F, _, 0x01, 0x05) => Instruction::SetDtEqToVx(vx),
+            (0x0F, _, 0x01, 0x08) => Instruction::SetStEqToVx(vx),
+            (0x0F, _, 0x01, 0x0E) => Instruction::SetIEqToIPlusVx(vx),
+            (0x0F, _, 0x02, 0x09) => Instruction::SetIEqToVx(vx),
+            (0x0F, _, 0x03, 0x03) => Instruction::StoreBcd(vx),
+            (0x0F, _, 0x05, 0x05) => Instruction::SetRegsInI(vx),
+            (0x0F, _, 0x06, 0x05) => Instruction::GetRegsInI(vx),
+            _ => Instruction::Ignore(self.0),
+        }
+    }
+}
+
+impl From<u16> for Opcode {
+    fn from(hexa: u16) -> Self {
+        Opcode(hexa)
+    }
 }
 
 #[cfg(test)]

@@ -93,15 +93,16 @@ impl Cpu {
         match instr {
             Instruction::Ignore(opcode) => println!("Ignored: {:#04x}", opcode),
             Instruction::Cls => self.display_buffer.reset(),
-            Instruction::Ret(address) => {
-                self.sp += 1;
-                self.stack[self.sp as usize] = self.pc as u16;
-                self.pc = address;
+            Instruction::Ret => {
+                let address = self.stack.pop().expect("Stack out of bounds!");
+
+                self.sp -= 1;
+                self.pc = address + 2;
             }
             Instruction::SysAddr => println!("WARN: COSMAC VIP Only Instruction. Skipping."),
             Instruction::Jump(address) => self.pc = address,
             Instruction::CallSubroutine(address) => {
-                self.stack[self.sp as usize] = self.pc + 2;
+                self.stack.push(self.pc);
                 self.sp += 1;
                 self.pc = address;
             }
@@ -233,7 +234,8 @@ impl Cpu {
             }
             Instruction::Mem(nnn) => {
                 println!("Mem: NNN: {:#04x}", nnn);
-                self.pc = nnn;
+                self.i = nnn;
+                self.pc += 2;
             }
             Instruction::Draw(vx, vy, n) => {
                 println!("Draw: VX: {:#04x} VY: {:#04x} N: {:#04x}", vx, vy, n);
@@ -454,8 +456,9 @@ mod tests {
         let mut cpu = Cpu::new();
         let rom = vec![
             // Assigns Vx to 11
-            0x6B, 0x11, // Conditional Eq for Vx to Vy
-            0x51, 0x11,
+            0x6B, 0x11, // Assigns Vx to 11
+            0x6A, 0x10, // Conditional Eq for Vx to Vy
+            0x5B, 0xA0,
         ];
 
         cpu.load(rom.into());
@@ -464,7 +467,7 @@ mod tests {
 
         assert_eq!(
             cpu.pc,
-            0x200 + 6,
+            0x200 + 4,
             "Doesn't skips a WORD because register value at Vx is not equal to KK."
         );
     }
