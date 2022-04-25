@@ -37,6 +37,8 @@ pub struct Cpu {
     pub(crate) display_buffer: DisplayBuffer,
     /// Keys pressed at the moment of the cycle execution
     pub(crate) keypad_state: KeypadState,
+    /// Stores the a key to expect the user to input if `Some`
+    pub(crate) keypad_await: Option<usize>,
 }
 
 impl Default for Cpu {
@@ -60,6 +62,7 @@ impl Cpu {
             dt: 0,
             display_buffer: DisplayBuffer::default(),
             keypad_state: [false; 16],
+            keypad_await: None,
         }
     }
 
@@ -77,18 +80,28 @@ impl Cpu {
 
         self.keypad_state = keypad_state;
 
-        if self.dt > 0 {
-            self.dt -= 1;
+        if let Some(register) = self.keypad_await {
+            for index in 0..16_usize {
+                if keypad_state[index] {
+                    self.keypad_await = None;
+                    self.registers[register] = index as u8;
+                    break;
+                }
+            }
+        } else {
+            if self.dt > 0 {
+                self.dt -= 1;
+            }
+
+            let opcode = self.fetch_opcode();
+            let instr = opcode.decode();
+
+            if matches!(instr, Instruction::Cls) || matches!(instr, Instruction::Draw(_, _, _)) {
+                display_update = true;
+            }
+
+            self.execute(instr);
         }
-
-        let opcode = self.fetch_opcode();
-        let instr = opcode.decode();
-
-        if matches!(instr, Instruction::Cls) || matches!(instr, Instruction::Draw(_, _, _)) {
-            display_update = true;
-        }
-
-        self.execute(instr);
 
         CycleOutput {
             display_buffer: self.display_buffer.clone(),
@@ -299,6 +312,17 @@ impl Cpu {
                 println!("Delay Timer: {:#04x}", self.dt);
                 self.registers[vx] = self.dt;
             }
+            Instruction::WaitKeyPressAndStoreOnVx(vx) => {
+                self.keypad_await = Some(vx);
+                self.pc += 2;
+            }
+            Instruction::SkipIfKeyPressed(vx) => {
+                if self.keypad_state[self.registers[vx] as usize] {
+                    self.pc += 4;
+                }
+
+                self.pc += 2;
+            }
             _ => {}
         }
     }
@@ -357,12 +381,12 @@ mod tests {
         cpu.load(rom.into());
 
         // Runs first cycle of CPU with 0xDFB8
-        cpu.cycle();
+        cpu.cycle([false; 16]);
 
         let written_display_buffer = cpu.display_buffer;
 
         // Runs second cycle of CPU with 0x00E0
-        cpu.cycle();
+        cpu.cycle([false; 16]);
 
         let cleared_display_buffer = cpu.display_buffer;
 
@@ -393,8 +417,8 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
-        cpu.cycle();
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
     }
 
     #[test]
@@ -403,7 +427,7 @@ mod tests {
         let rom = vec![0x12, 0xCD];
 
         cpu.load(rom.into());
-        cpu.cycle();
+        cpu.cycle([false; 16]);
 
         assert_eq!(cpu.pc, 0x2CD, "Jump to address on NNN");
     }
@@ -414,7 +438,7 @@ mod tests {
         let rom = vec![0x21, 0x23];
 
         cpu.load(rom.into());
-        cpu.cycle();
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.stack.pop().unwrap(),
@@ -434,8 +458,8 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
-        cpu.cycle();
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.pc,
@@ -450,7 +474,7 @@ mod tests {
         let rom = vec![0x32, 0x04];
 
         cpu.load(rom.into());
-        cpu.cycle();
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.pc,
@@ -470,8 +494,8 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
-        cpu.cycle();
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.pc,
@@ -489,7 +513,7 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.registers[0x0b], 0x0b,
@@ -507,8 +531,8 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
-        cpu.cycle();
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.registers[0x0A], 0x08,
@@ -531,9 +555,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
-        cpu.cycle();
-        cpu.cycle();
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.registers[0x0a], 0x06,
@@ -552,9 +576,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
-        cpu.cycle();
-        cpu.cycle();
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.registers[0x0a], 0x0a,
@@ -573,9 +597,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
-        cpu.cycle();
-        cpu.cycle();
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.registers[0x0a], 0x0c,
@@ -594,9 +618,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
-        cpu.cycle();
-        cpu.cycle();
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.registers[0x0a], 0x17,
@@ -619,9 +643,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
-        cpu.cycle();
-        cpu.cycle();
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.registers[0x0d], 0x03,
@@ -644,9 +668,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
-        cpu.cycle();
-        cpu.cycle();
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.registers[0x1], 0xFE,
@@ -669,9 +693,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
-        cpu.cycle();
-        cpu.cycle();
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.registers[0x1], 0xF4,
@@ -693,8 +717,8 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
-        cpu.cycle();
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.registers[0x0a], 0x05,
@@ -712,8 +736,8 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
-        cpu.cycle();
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.registers[0x0a], 0x00,
@@ -731,8 +755,8 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
-        cpu.cycle();
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.registers[0x0a], 0x14,
@@ -752,9 +776,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
-        cpu.cycle();
-        cpu.cycle();
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.pc,
@@ -772,7 +796,7 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
+        cpu.cycle([false; 16]);
 
         assert_eq!(cpu.i, 0x0123, "Index register is set to 0x0123");
     }
@@ -789,7 +813,7 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.dt, cpu.registers[0x0A],
@@ -809,7 +833,7 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle();
+        cpu.cycle([false; 16]);
 
         assert_eq!(
             cpu.dt, cpu.registers[0x0A],

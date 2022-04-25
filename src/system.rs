@@ -42,7 +42,7 @@ impl System {
                 self.display.render(&cycle_output.display_buffer);
             }
 
-            std::thread::sleep(std::time::Duration::from_millis(500));
+            std::thread::sleep(std::time::Duration::from_millis(2));
         }
     }
 }

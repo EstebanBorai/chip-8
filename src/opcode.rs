@@ -159,7 +159,7 @@ pub enum Instruction {
     ///
     /// Checks the keyboard, and if the key corresponding to the value of Vx is
     /// currently in the down position, PC is increased by 2.
-    KeyOpVxPressed(usize),
+    SkipIfKeyPressed(usize),
     /// `ExA1` - SKNP Vx
     /// Skip next instruction if key with the value of Vx is not pressed.
     ///
@@ -176,7 +176,7 @@ pub enum Instruction {
     ///
     /// All execution stops until a key is pressed, then the value of that key
     /// is stored in Vx.
-    LdVxK(usize),
+    WaitKeyPressAndStoreOnVx(usize),
     /// `Fx15` - LD DT, Vx
     /// Set delay timer = Vx.
     ///
@@ -341,10 +341,10 @@ impl Opcode {
             (0x0B, _, _, _) => Instruction::JumpPcV0(nnn),
             (0x0C, _, _, _) => Instruction::Rand(vx, kk),
             (0x0D, _, _, _) => Instruction::Draw(vx, vy, n),
-            (0x0E, _, 0x09, 0x0E) => Instruction::KeyOpVxPressed(vx),
+            (0x0E, _, 0x09, 0x0E) => Instruction::SkipIfKeyPressed(vx),
             (0x0E, _, 0x0A, 0x01) => Instruction::KeyOpVxNotPressed(vx),
             (0x0F, _, 0x00, 0x07) => Instruction::SetVxEqToDt(vx),
-            (0x0F, _, 0x00, 0x0A) => Instruction::KeyOpVxNotPressed(vx),
+            (0x0F, _, 0x00, 0x0A) => Instruction::WaitKeyPressAndStoreOnVx(vx),
             (0x0F, _, 0x01, 0x05) => Instruction::SetDtEqToVx(vx),
             (0x0F, _, 0x01, 0x08) => Instruction::SetStEqToVx(vx),
             (0x0F, _, 0x01, 0x0E) => Instruction::SetIEqToIPlusVx(vx),
