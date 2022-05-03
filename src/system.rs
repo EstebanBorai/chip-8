@@ -2,6 +2,7 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::EventPump;
 
+use crate::audio::Audio;
 use crate::config::Config;
 use crate::cpu::Cpu;
 use crate::display::Display;
@@ -9,6 +10,7 @@ use crate::keypad::Keypad;
 use crate::rom::Rom;
 
 pub struct System {
+    audio: Audio,
     config: Config,
     cpu: Cpu,
     display: Display,
@@ -20,6 +22,7 @@ impl System {
         let mut cpu = Cpu::new();
         let sdl = sdl2::init().unwrap();
         let event_pump = sdl.event_pump().unwrap();
+        let audio = Audio::new(&sdl);
         let display = Display::new(&sdl, "Chip8", 12);
         let keypad = Keypad::new(event_pump);
         let rom = Rom::from_path(&config.rom);
@@ -27,6 +30,7 @@ impl System {
         cpu.load(rom);
 
         Self {
+            audio,
             config,
             cpu,
             display,
@@ -40,6 +44,12 @@ impl System {
 
             if cycle_output.display_update {
                 self.display.render(&cycle_output.display_buffer);
+            }
+
+            if cycle_output.beep {
+                self.audio.play();
+            } else {
+                self.audio.stop();
             }
 
             std::thread::sleep(std::time::Duration::from_millis(2));

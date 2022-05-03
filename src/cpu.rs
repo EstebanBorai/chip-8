@@ -12,6 +12,7 @@ use crate::stack::Stack;
 pub const CLOCK_RATE: f32 = 600.0;
 
 pub struct CycleOutput {
+    pub beep: bool,
     pub display_buffer: DisplayBuffer,
     pub display_update: bool,
 }
@@ -33,6 +34,8 @@ pub struct Cpu {
     pub(crate) registers: RegisterSet,
     /// Delay Timer (DT)
     pub(crate) dt: u8,
+    /// Sound Time (ST)
+    pub(crate) st: u8,
     /// Display Buffer to hold bytes mapped to output display
     pub(crate) display_buffer: DisplayBuffer,
     /// Keys pressed at the moment of the cycle execution
@@ -60,6 +63,7 @@ impl Cpu {
             stack: Stack::default(),
             sp: 0,
             dt: 0,
+            st: 0,
             display_buffer: DisplayBuffer::default(),
             keypad_state: [false; 16],
             keypad_await: None,
@@ -93,6 +97,10 @@ impl Cpu {
                 self.dt -= 1;
             }
 
+            if self.st > 0 {
+                self.st -= 1;
+            }
+
             let opcode = self.fetch_opcode();
             let instr = opcode.decode();
 
@@ -104,6 +112,7 @@ impl Cpu {
         }
 
         CycleOutput {
+            beep: self.st > 0,
             display_buffer: self.display_buffer.clone(),
             display_update,
         }
@@ -305,6 +314,13 @@ impl Cpu {
                 println!("Registers: {:#04x} == {:#04x}", vx, self.registers[vx]);
                 println!("Delay Timer: {:#04x}", self.dt);
                 self.dt = self.registers[vx]
+            }
+            Instruction::SetStEqToVx(vx) => {
+                println!("SetStEqToVx: VX: {:#04x}", vx);
+                println!("Registers: {:#04x} == {:#04x}", vx, self.registers[vx]);
+                println!("Sound Timer: {:#04x}", self.st);
+                self.st = self.registers[vx];
+                self.pc += 2;
             }
             Instruction::SetVxEqToDt(vx) => {
                 println!("SetVxEqToDt: VX: {:#04x}", vx);
@@ -839,5 +855,19 @@ mod tests {
             cpu.dt, cpu.registers[0x0A],
             "The DT is set to the value of the Register on VX"
         );
+    }
+
+    #[test]
+    fn instr_set_st_eq_to_vx() {
+        let mut cpu = Cpu::new();
+
+        cpu.registers[0x3] = 0x10;
+
+        let rom = vec![0xF3, 0x18];
+
+        cpu.load(rom.into());
+        cpu.cycle([false; 16]);
+
+        assert_eq!(cpu.st, 0x10);
     }
 }
