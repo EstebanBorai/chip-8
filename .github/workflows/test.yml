@@ -7,10 +7,15 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v2
+
+      - name: Checkout project files
+        uses: actions/checkout@v2
+
+      - name: Installs SDL2
+        run: brew install SDL2
 
       - name: Cache .cargo and target
         uses: actions/cache@v2
