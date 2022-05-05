@@ -46,7 +46,7 @@ pub const MEMORY_END: usize = 0x1000;
 /// | User Space           |
 /// 0x1000 ------------------> END - 4096B
 /// ```
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Memory([u8; 4096]);
 
 impl Default for Memory {

@@ -118,16 +118,19 @@ impl Cpu {
         }
     }
 
+    pub fn load_and_exec(&mut self, opcode: u16) {
+        self.load(vec![(opcode >> 8) as u8, (opcode & 0xff) as u8].into());
+        self.cycle([false; 16]);
+    }
+
     /// Executes the provided instruction
     pub fn execute(&mut self, instr: Instruction) {
         match instr {
             Instruction::Ignore(opcode) => println!("Ignored: {:#04x}", opcode),
             Instruction::Cls => self.display_buffer.reset(),
             Instruction::Ret => {
-                let address = self.stack.pop().expect("Stack out of bounds!");
-
                 self.sp -= 1;
-                self.pc = address + 2;
+                self.pc = self.stack[self.sp as usize] as u16;
             }
             Instruction::SysAddr => println!("WARN: COSMAC VIP Only Instruction. Skipping."),
             Instruction::Jump(address) => self.pc = address,
@@ -367,9 +370,29 @@ impl Cpu {
 
 #[cfg(test)]
 mod tests {
-    use crate::memory::USER_SPACE_STR;
+    use crate::display::buffer::DisplayBuffer;
+    use crate::memory::{Memory, USER_SPACE_STR};
+    use crate::register_set::RegisterSet;
+    use crate::stack::Stack;
 
     use super::Cpu;
+
+    #[test]
+    fn new_instance() {
+        let cpu = Cpu::new();
+
+        assert_eq!(cpu.ram, Memory::default());
+        assert_eq!(cpu.pc, USER_SPACE_STR as u16);
+        assert_eq!(cpu.i, 0);
+        assert_eq!(cpu.stack, Stack::default());
+        assert_eq!(cpu.sp, 0);
+        assert_eq!(cpu.registers, RegisterSet::default());
+        assert_eq!(cpu.dt, 0);
+        assert_eq!(cpu.st, 0);
+        assert_eq!(cpu.display_buffer, DisplayBuffer::default());
+        assert_eq!(cpu.keypad_state, [false; 16]);
+        assert_eq!(cpu.keypad_await, None);
+    }
 
     #[test]
     fn load_rom_into_memory() {
@@ -426,77 +449,53 @@ mod tests {
     #[test]
     fn instr_ret() {
         let mut cpu = Cpu::new();
-        let rom = vec![
-            // Sets a subroutine into the stack
-            0x21, 0x23, // Returns from subroutine
-            0x00, 0xEE,
-        ];
 
-        cpu.load(rom.into());
-        cpu.cycle([false; 16]);
-        cpu.cycle([false; 16]);
+        cpu.sp = 0x0005;
+        cpu.stack[4] = 0x2323;
+        cpu.load_and_exec(0x00EE);
+
+        assert_eq!(cpu.sp, 4);
+        assert_eq!(cpu.pc, 0x2323);
     }
 
     #[test]
     fn instr_jump() {
         let mut cpu = Cpu::new();
-        let rom = vec![0x12, 0xCD];
 
-        cpu.load(rom.into());
-        cpu.cycle([false; 16]);
+        cpu.load_and_exec(0x12CD);
 
-        assert_eq!(cpu.pc, 0x2CD, "Jump to address on NNN");
+        assert_eq!(cpu.pc, 0x02CD, "Jump to address on NNN");
     }
 
     #[test]
     fn instr_call_subroutine() {
         let mut cpu = Cpu::new();
-        let rom = vec![0x21, 0x23];
 
-        cpu.load(rom.into());
-        cpu.cycle([false; 16]);
+        cpu.load_and_exec(0x2123);
 
+        assert_eq!(cpu.pc, 0x0123, "The value of PC is the one set by NNN");
+        assert_eq!(cpu.sp, 1, "Stack Pointer is back to 1");
         assert_eq!(
             cpu.stack.pop().unwrap(),
             0x200 + 2,
             "The PC (which starts on 0x200) is popped out of the stack"
         );
-        assert_eq!(cpu.pc, 0x123, "The value of PC is the one set by NNN");
     }
 
     #[test]
     fn instr_cond_eq() {
         let mut cpu = Cpu::new();
-        let rom = vec![
-            0x6B, // Assigns Vx to 2
-            0x02, 0x3B, // Cond Eq for REGVX to KK
-            0x02,
-        ];
 
-        cpu.load(rom.into());
-        cpu.cycle([false; 16]);
-        cpu.cycle([false; 16]);
-
-        assert_eq!(
-            cpu.pc,
-            0x200 + 6,
-            "Skips a WORD given that register value at VX is equal to KK."
-        );
+        cpu.load_and_exec(0x3200);
+        assert_eq!(cpu.pc, 0x200 + 4, "Skips if condition is equal");
     }
 
     #[test]
     fn instr_cond_not_eq() {
         let mut cpu = Cpu::new();
-        let rom = vec![0x32, 0x04];
 
-        cpu.load(rom.into());
-        cpu.cycle([false; 16]);
-
-        assert_eq!(
-            cpu.pc,
-            0x200 + 2,
-            "Doesn't skips a WORD because register value at VX is not equal to KK."
-        );
+        cpu.load_and_exec(0x3212);
+        assert_eq!(cpu.pc, 0x200 + 2, "Doesn't skips if condition is not equal");
     }
 
     #[test]

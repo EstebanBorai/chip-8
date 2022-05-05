@@ -1,5 +1,6 @@
 use std::ops::{Index, IndexMut};
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct RegisterSet([u8; 0x0016]);
 
 impl Default for RegisterSet {

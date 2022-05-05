@@ -3,7 +3,7 @@ use std::ptr;
 
 use super::SCREEN_AREA;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DisplayBuffer(pub(crate) [u8; SCREEN_AREA]);
 
 impl DisplayBuffer {

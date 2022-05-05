@@ -1,5 +1,5 @@
-use chip8::config::Config;
-use chip8::system::System;
+use ch8::config::Config;
+use ch8::system::System;
 use structopt::StructOpt;
 
 fn main() {

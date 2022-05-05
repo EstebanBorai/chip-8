@@ -1,5 +1,6 @@
 use std::ops::{Index, IndexMut};
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct Stack(Vec<u16>);
 
 impl Stack {
@@ -14,7 +15,7 @@ impl Stack {
 
 impl Default for Stack {
     fn default() -> Self {
-        Stack(Vec::with_capacity(0x0016))
+        Stack([0; 16].into())
     }
 }
 
