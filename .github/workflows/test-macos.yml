@@ -1,4 +1,4 @@
-name: test
+name: test-macos
 on:
   pull_request:
   push:
@@ -10,7 +10,6 @@ jobs:
     runs-on: macos-latest
 
     steps:
-
       - name: Checkout project files
         uses: actions/checkout@v2
 
@@ -27,6 +26,5 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
             ${{ runner.os }}-cargo-test
-
       - name: Run "cargo test"
         run: cargo test
