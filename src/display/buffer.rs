@@ -8,7 +8,6 @@ pub struct DisplayBuffer(pub(crate) [u8; SCREEN_AREA]);
 
 impl DisplayBuffer {
     pub fn reset(&mut self) {
-        println!("ResetDisplayBuffer");
         unsafe {
             let buff = self.0.as_mut_ptr();
             ptr::write_bytes(buff, 0, SCREEN_AREA);

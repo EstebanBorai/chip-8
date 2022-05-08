@@ -263,6 +263,7 @@ pub enum Instruction {
 /// ```
 ///
 /// Refer: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#3.0
+#[derive(Debug)]
 pub struct Opcode(u16);
 
 impl Opcode {

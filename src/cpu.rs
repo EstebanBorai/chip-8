@@ -4,7 +4,7 @@ use crate::display::buffer::DisplayBuffer;
 use crate::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use crate::keypad::KeypadState;
 use crate::memory::{Memory, USER_SPACE_STR};
-use crate::opcode::{Instruction, Opcode};
+use crate::opcode::{Instruction, Opcode, self};
 use crate::register_set::RegisterSet;
 use crate::rom::Rom;
 use crate::stack::Stack;
@@ -102,6 +102,7 @@ impl Cpu {
             }
 
             let opcode = self.fetch_opcode();
+            println!("{:?}", opcode);
             let instr = opcode.decode();
 
             if matches!(instr, Instruction::Cls) || matches!(instr, Instruction::Draw(_, _, _)) {
@@ -140,138 +141,71 @@ impl Cpu {
                 self.pc = address;
             }
             Instruction::CondEq(vx, kk) => {
-                println!(
-                    "CondEq: VX: {:#04x} KK: {:#04x} REGVX: {:#04x}",
-                    vx, kk, self.registers[vx]
-                );
                 if self.registers[vx] == kk {
                     self.pc += 2;
                 }
             }
             Instruction::CondNotEq(vx, kk) => {
-                println!(
-                    "CondNotEq: VX: {:#04x} KK: {:#04x} REGVX: {:#04x}",
-                    vx, kk, self.registers[vx]
-                );
                 if self.registers[vx] != kk {
                     self.pc += 2;
                 }
             }
             Instruction::CondEqVxVy(vx, vy) => {
-                println!(
-                    "CondEqVxVy: VX: {:#04x} VY: {:#04x} REGVX: {:#04x} REGVY: {:#04x}",
-                    vx, vy, self.registers[vx], self.registers[vy]
-                );
                 if self.registers[vx] == self.registers[vy] {
                     self.pc += 2;
                 }
             }
             Instruction::ConstAssignVxToKk(vx, kk) => {
-                println!(
-                    "ConstAssignVxToKk: VX: {:#04x} ({vx}) KK: {:#04x} ({kk})",
-                    vx, kk
-                );
                 self.registers[vx] = kk
             }
             Instruction::ConstAddVxToKk(vx, kk) => {
                 self.registers[vx] = kk.wrapping_add(self.registers[vx])
             }
             Instruction::AssignVxToVy(vx, vy) => {
-                println!("AssignVxToVy: VX: {:#04x} VY: {:#04x}", vx, vy);
                 self.registers[vx] = self.registers[vy]
             }
             Instruction::BitOpOr(vx, vy) => {
-                println!("BitOpOr: VX: {:#04x} VY: {:#04x}", vx, vy);
-                println!(
-                    "Registers: \n {:#04x} == {:#04x} \n {:#04x} == {:#04x}",
-                    vx, self.registers[vx], vy, self.registers[vy]
-                );
                 self.registers[vx] = self.registers[vx] | self.registers[vy];
                 self.pc += 2;
             }
             Instruction::BitOpAnd(vx, vy) => {
-                println!("BitOpAnd: VX: {:#04x} VY: {:#04x}", vx, vy);
-                println!(
-                    "Registers: \n {:#04x} == {:#04x} \n {:#04x} == {:#04x}",
-                    vx, self.registers[vx], vy, self.registers[vy]
-                );
                 self.registers[vx] = self.registers[vx] & self.registers[vy];
                 self.pc += 2;
             }
             Instruction::BitOpXor(vx, vy) => {
-                println!("BitOpXor: VX: {:#04x} VY: {:#04x}", vx, vy);
-                println!(
-                    "Registers: \n {:#04x} == {:#04x} \n {:#04x} == {:#04x}",
-                    vx, self.registers[vx], vy, self.registers[vy]
-                );
                 self.registers[vx] = self.registers[vx] ^ self.registers[vy]
             }
             Instruction::MathAdd(vx, vy) => {
-                println!("MathAdd: VX: {:#04x} VY: {:#04x}", vx, vy);
-                println!(
-                    "Registers: \n {:#04x} == {:#04x} ({}) \n {:#04x} == {:#04x} ({})",
-                    vx,
-                    self.registers[vx],
-                    self.registers[vx],
-                    vy,
-                    self.registers[vy],
-                    self.registers[vy]
-                );
-
                 let (result, overflows) = self.registers[vx].overflowing_add(self.registers[vy]);
 
                 self.registers[0xF] = overflows as u8;
                 self.registers[vx] = result;
             }
             Instruction::MathSub(vx, vy) => {
-                println!("MathSub: VX: {:#04x} VY: {:#04x}", vx, vy);
-                println!(
-                    "Registers: \n {:#04x} == {:#04x} ({}) \n {:#04x} == {:#04x} ({})",
-                    vx,
-                    self.registers[vx],
-                    self.registers[vx],
-                    vy,
-                    self.registers[vy],
-                    self.registers[vy]
-                );
-
                 let (result, overflows) = self.registers[vx].overflowing_sub(self.registers[vy]);
 
                 self.registers[0xF] = overflows as u8;
                 self.registers[vx] = result;
             }
             Instruction::BitOpShr(vx) => {
-                println!("BitOpShr: VX: {:#04x}", vx);
-                println!("Registers: \n {:#04x} == {:#04x}", vx, self.registers[vx]);
                 self.registers[vx] = self.registers[vx] >> 1
             }
             Instruction::MathSubVyVx(vx, vy) => {
-                println!("MathSubVyVx: VX: {:#04x} VY: {:#04x}", vx, vy);
-                println!("Registers: \n {:#04x} == {:#04x}", vx, self.registers[vx]);
                 self.registers[vx] = self.registers[vx] - vy as u8
             }
             Instruction::BitOpShl(vx) => {
-                println!("BitOpShl: VX: {:#04x}", vx);
-                println!("Registers: \n {:#04x} == {:#04x}", vx, self.registers[vx]);
                 self.registers[vx] = self.registers[vx] << 1;
             }
             Instruction::CondVxNotEqVy(vx, vy) => {
-                println!("CondVxNotEqVy: VX: {:#04x} VY: {:#04x}", vx, vy);
-                println!(
-                    "Registers: \n {:#04x} == {:#04x} \n {:#04x} == {:#04x}",
-                    vx, self.registers[vx], vy, self.registers[vy]
-                );
                 if self.registers[vx] != self.registers[vy] {
                     self.pc += 2;
                 }
             }
             Instruction::Mem(nnn) => {
-                println!("Mem: NNN: {:#04x}", nnn);
                 self.i = nnn;
                 self.pc += 2;
             }
             Instruction::Draw(vx, vy, n) => {
-                println!("Draw: VX: {:#04x} VY: {:#04x} N: {:#04x}", vx, vy, n);
                 // Set the X coordinate to the value in VX modulo 64 (or,
                 // equivalently, VX & 63, where & is the binary AND operation)
                 let x = self.registers[vx] & 63;
@@ -313,22 +247,13 @@ impl Cpu {
                 }
             }
             Instruction::SetDtEqToVx(vx) => {
-                println!("SetDtEqToVx: VX: {:#04x}", vx);
-                println!("Registers: {:#04x} == {:#04x}", vx, self.registers[vx]);
-                println!("Delay Timer: {:#04x}", self.dt);
                 self.dt = self.registers[vx]
             }
             Instruction::SetStEqToVx(vx) => {
-                println!("SetStEqToVx: VX: {:#04x}", vx);
-                println!("Registers: {:#04x} == {:#04x}", vx, self.registers[vx]);
-                println!("Sound Timer: {:#04x}", self.st);
                 self.st = self.registers[vx];
                 self.pc += 2;
             }
             Instruction::SetVxEqToDt(vx) => {
-                println!("SetVxEqToDt: VX: {:#04x}", vx);
-                println!("Registers: {:#04x} == {:#04x}", vx, self.registers[vx]);
-                println!("Delay Timer: {:#04x}", self.dt);
                 self.registers[vx] = self.dt;
             }
             Instruction::WaitKeyPressAndStoreOnVx(vx) => {

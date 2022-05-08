@@ -64,20 +64,12 @@ impl Index<usize> for Memory {
     type Output = u8;
 
     fn index(&self, index: usize) -> &Self::Output {
-        println!(
-            "MemoryAccessByAddress ==> Addr: {:#04x} <-> Value: {:#04x}",
-            index, self.0[index]
-        );
         &self.0[index]
     }
 }
 
 impl IndexMut<usize> for Memory {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        println!(
-            "MutMemoryAccessByAddress ==> Addr: {:#04x} <-> Value: {:#04x}",
-            index, self.0[index]
-        );
         &mut self.0[index]
     }
 }
