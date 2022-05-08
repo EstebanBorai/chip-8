@@ -1,6 +1,9 @@
+use std::fmt;
+
 /// CPU Executable Instructions
 ///
 /// Refer: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#3.1
+#[derive(Clone, Copy, Debug)]
 pub enum Instruction {
     Ignore(u16),
     /// `0nnn` - SYS addr
@@ -220,6 +223,50 @@ pub enum Instruction {
     GetRegsInI(usize),
 }
 
+impl fmt::Display for Instruction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let instr_code = match &self {
+            Self::Ignore(_) => "___",
+            Self::Cls => "CLS",
+            Self::SysAddr => "SYS",
+            Self::Ret => "RET",
+            Self::Jump(_) => "JP",
+            Self::CallSubroutine(_) => "CALL",
+            Self::CondEq(_, _) => "SE",
+            Self::CondNotEq(_, _) => "SNE",
+            Self::CondEqVxVy(_, _) => "SNER",
+            Self::ConstAssignVxToKk(_, _) => "LDVX",
+            Self::ConstAddVxToKk(_, _) => "ADD",
+            Self::AssignVxToVy(_, _) => "LDVXVY",
+            Self::BitOpOr(_, _) => "ORVXVY",
+            Self::BitOpAnd(_, _) => "ANDVXVY",
+            Self::BitOpXor(_, _) => "XORVXVY",
+            Self::MathAdd(_, _) => "MADD",
+            Self::MathSub(_, _) => "MSUB",
+            Self::BitOpShr(_) => "SHLT",
+            Self::CondVxNotEqVy(_, _) => "SNEVXVY",
+            Self::Mem(_) => "MEM",
+            Self::JumpPcV0(_) => "JPV0",
+            Self::Rand(_, _) => "RND",
+            Self::Draw(_, _, _) => "DRW",
+            Self::SkipIfKeyPressed(_) => "SKP",
+            Self::KeyOpVxNotPressed(_) => "SKNP",
+            Self::SetVxEqToDt(_) => "LDVXDT",
+            Self::WaitKeyPressAndStoreOnVx(_) => "LDVXK",
+            Self::SetDtEqToVx(_) => "LDDTVX",
+            Self::SetStEqToVx(_) => "LDSTVX",
+            Self::SetIEqToIPlusVx(_) => "ADDIVX",
+            Self::SetIEqToVx(_) => "LDFVX",
+            Self::StoreBcd(_) => "LDBVX",
+            Self::SetRegsInI(_) => "LDIVX",
+            Self::GetRegsInI(_) => "LDVXI",
+            _ => "UNK",
+        };
+
+        write!(f, "{:04}", instr_code)
+    }
+}
+
 /// Chip8 opcodes are 16-bit hexadecimal values which represent CPU
 /// instructions. These are decoded and interpreted accordingly based on the
 /// structure of the hexadecimal value.
@@ -265,6 +312,12 @@ pub enum Instruction {
 /// Refer: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#3.0
 #[derive(Debug)]
 pub struct Opcode(u16);
+
+impl fmt::Display for Opcode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:#04x}", self.0)
+    }
+}
 
 impl Opcode {
     #[inline(always)]

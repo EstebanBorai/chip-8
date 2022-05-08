@@ -4,7 +4,7 @@ use crate::display::buffer::DisplayBuffer;
 use crate::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use crate::keypad::KeypadState;
 use crate::memory::{Memory, USER_SPACE_STR};
-use crate::opcode::{Instruction, Opcode, self};
+use crate::opcode::{self, Instruction, Opcode};
 use crate::register_set::RegisterSet;
 use crate::rom::Rom;
 use crate::stack::Stack;
@@ -101,8 +101,7 @@ impl Cpu {
                 self.st -= 1;
             }
 
-            let opcode = self.fetch_opcode();
-            println!("{:?}", opcode);
+            let opcode = &self.fetch_opcode();
             let instr = opcode.decode();
 
             if matches!(instr, Instruction::Cls) || matches!(instr, Instruction::Draw(_, _, _)) {
@@ -110,6 +109,11 @@ impl Cpu {
             }
 
             self.execute(instr);
+
+            println!(
+                "PC: {}\t{} - {}\t{}\tI: {}\tSP: {}\tDT: {}\tST: {}",
+                self.pc, opcode, instr, self.registers, self.i, self.sp, self.dt, self.st
+            );
         }
 
         CycleOutput {
@@ -155,15 +159,11 @@ impl Cpu {
                     self.pc += 2;
                 }
             }
-            Instruction::ConstAssignVxToKk(vx, kk) => {
-                self.registers[vx] = kk
-            }
+            Instruction::ConstAssignVxToKk(vx, kk) => self.registers[vx] = kk,
             Instruction::ConstAddVxToKk(vx, kk) => {
                 self.registers[vx] = kk.wrapping_add(self.registers[vx])
             }
-            Instruction::AssignVxToVy(vx, vy) => {
-                self.registers[vx] = self.registers[vy]
-            }
+            Instruction::AssignVxToVy(vx, vy) => self.registers[vx] = self.registers[vy],
             Instruction::BitOpOr(vx, vy) => {
                 self.registers[vx] = self.registers[vx] | self.registers[vy];
                 self.pc += 2;
@@ -187,12 +187,8 @@ impl Cpu {
                 self.registers[0xF] = overflows as u8;
                 self.registers[vx] = result;
             }
-            Instruction::BitOpShr(vx) => {
-                self.registers[vx] = self.registers[vx] >> 1
-            }
-            Instruction::MathSubVyVx(vx, vy) => {
-                self.registers[vx] = self.registers[vx] - vy as u8
-            }
+            Instruction::BitOpShr(vx) => self.registers[vx] = self.registers[vx] >> 1,
+            Instruction::MathSubVyVx(vx, vy) => self.registers[vx] = self.registers[vx] - vy as u8,
             Instruction::BitOpShl(vx) => {
                 self.registers[vx] = self.registers[vx] << 1;
             }
@@ -246,9 +242,7 @@ impl Cpu {
                     }
                 }
             }
-            Instruction::SetDtEqToVx(vx) => {
-                self.dt = self.registers[vx]
-            }
+            Instruction::SetDtEqToVx(vx) => self.dt = self.registers[vx],
             Instruction::SetStEqToVx(vx) => {
                 self.st = self.registers[vx];
                 self.pc += 2;
@@ -287,7 +281,7 @@ impl Cpu {
     fn fetch_opcode(&mut self) -> Opcode {
         let pc = self.pc as usize;
         let hexa: u16 = (self.ram[pc] as u16) << 8 | (self.ram[pc + 1] as u16);
-        println!("{:#04x}", hexa);
+
         self.pc += 2;
         Opcode::from(hexa)
     }
