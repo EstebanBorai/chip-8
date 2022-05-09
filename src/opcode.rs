@@ -317,7 +317,7 @@ pub struct Opcode(u16);
 
 impl fmt::Display for Opcode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:#04x}", self.0)
+        write!(f, "{:#06x}", self.0)
     }
 }
 
