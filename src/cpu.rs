@@ -1,4 +1,4 @@
-use sdl2::keyboard;
+use rand::random;
 
 use crate::display::buffer::DisplayBuffer;
 use crate::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
@@ -139,6 +139,7 @@ impl Cpu {
             }
             Instruction::SysAddr => println!("WARN: COSMAC VIP Only Instruction. Skipping."),
             Instruction::Jump(address) => self.pc = address,
+            Instruction::Rand(vx, kk) => self.registers[vx] = kk & random::<u8>(),
             Instruction::CallSubroutine(address) => {
                 self.stack.push(self.pc);
                 self.sp += 1;
