@@ -5,7 +5,6 @@ use std::fmt;
 /// Refer: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#3.1
 #[derive(Clone, Copy, Debug)]
 pub enum Instruction {
-    Ignore(u16),
     /// `0nnn` - SYS addr
     /// Jump to a machine code routine at nnn.
     ///
@@ -208,7 +207,7 @@ pub enum Instruction {
     /// The interpreter takes the decimal value of Vx, and places the hundreds
     /// digit in memory at location in I, the tens digit at location I+1, and
     /// the ones digit at location I+2.
-    StoreBcd(usize),
+    StoreBinaryCodedDecimal(usize),
     /// `Fx55` - LD [I], Vx
     /// Store registers V0 through Vx in memory starting at location I.
     ///
@@ -221,46 +220,49 @@ pub enum Instruction {
     /// The interpreter reads values from memory starting at location I into
     /// registers V0 through Vx.
     GetRegsInI(usize),
+    /// An Instruction sent when an unknown opcode is encountered
+    Unknown,
 }
 
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let instr_code = match &self {
-            Self::Ignore(_) => "___",
-            Self::Cls => "CLS",
-            Self::SysAddr => "SYS",
-            Self::Ret => "RET",
-            Self::Jump(_) => "JP",
-            Self::CallSubroutine(_) => "CALL",
-            Self::CondEq(_, _) => "SE",
-            Self::CondNotEq(_, _) => "SNE",
-            Self::CondEqVxVy(_, _) => "SNER",
-            Self::ConstAssignVxToKk(_, _) => "LDVX",
-            Self::ConstAddVxToKk(_, _) => "ADD",
-            Self::AssignVxToVy(_, _) => "LDVXVY",
-            Self::BitOpOr(_, _) => "ORVXVY",
-            Self::BitOpAnd(_, _) => "ANDVXVY",
-            Self::BitOpXor(_, _) => "XORVXVY",
-            Self::MathAdd(_, _) => "MADD",
-            Self::MathSub(_, _) => "MSUB",
-            Self::BitOpShr(_) => "SHLT",
-            Self::CondVxNotEqVy(_, _) => "SNEVXVY",
-            Self::Mem(_) => "MEM",
-            Self::JumpPcV0(_) => "JPV0",
-            Self::Rand(_, _) => "RND",
-            Self::Draw(_, _, _) => "DRW",
-            Self::SkipIfKeyPressed(_) => "SKP",
-            Self::KeyOpVxNotPressed(_) => "SKNP",
-            Self::SetVxEqToDt(_) => "LDVXDT",
-            Self::WaitKeyPressAndStoreOnVx(_) => "LDVXK",
-            Self::SetDtEqToVx(_) => "LDDTVX",
-            Self::SetStEqToVx(_) => "LDSTVX",
-            Self::SetIEqToIPlusVx(_) => "ADDIVX",
-            Self::SetIEqToVx(_) => "LDFVX",
-            Self::StoreBcd(_) => "LDBVX",
-            Self::SetRegsInI(_) => "LDIVX",
-            Self::GetRegsInI(_) => "LDVXI",
-            _ => "UNK",
+            Instruction::Cls => "CLS",
+            Instruction::SysAddr => "SYS",
+            Instruction::Ret => "RET",
+            Instruction::Jump(_) => "JP",
+            Instruction::CallSubroutine(_) => "CALL",
+            Instruction::CondEq(_, _) => "SE",
+            Instruction::CondNotEq(_, _) => "SNE",
+            Instruction::CondEqVxVy(_, _) => "SNER",
+            Instruction::ConstAssignVxToKk(_, _) => "LDVX",
+            Instruction::ConstAddVxToKk(_, _) => "ADD",
+            Instruction::AssignVxToVy(_, _) => "LDVXVY",
+            Instruction::BitOpOr(_, _) => "ORVXVY",
+            Instruction::BitOpAnd(_, _) => "ANDVXVY",
+            Instruction::BitOpXor(_, _) => "XORVXVY",
+            Instruction::MathAdd(_, _) => "MADD",
+            Instruction::MathSub(_, _) => "MSUB",
+            Instruction::MathSubVyVx(_, _) => "MSUBVXVY",
+            Instruction::BitOpShr(_) => "SHRT",
+            Instruction::BitOpShl(_) => "SHLT",
+            Instruction::CondVxNotEqVy(_, _) => "SNEVXVY",
+            Instruction::Mem(_) => "MEM",
+            Instruction::JumpPcV0(_) => "JPV0",
+            Instruction::Rand(_, _) => "RND",
+            Instruction::Draw(_, _, _) => "DRW",
+            Instruction::SkipIfKeyPressed(_) => "SKP",
+            Instruction::KeyOpVxNotPressed(_) => "SKNP",
+            Instruction::SetVxEqToDt(_) => "LDVXDT",
+            Instruction::WaitKeyPressAndStoreOnVx(_) => "LDVXK",
+            Instruction::SetDtEqToVx(_) => "LDDTVX",
+            Instruction::SetStEqToVx(_) => "LDSTVX",
+            Instruction::SetIEqToIPlusVx(_) => "ADDIVX",
+            Instruction::SetIEqToVx(_) => "LDFVX",
+            Instruction::StoreBinaryCodedDecimal(_) => "LDBVX",
+            Instruction::SetRegsInI(_) => "LDIVX",
+            Instruction::GetRegsInI(_) => "LDVXI",
+            Instruction::Unknown => "UNKWN",
         };
 
         write!(f, "{:04}", instr_code)
@@ -403,10 +405,10 @@ impl Opcode {
             (0x0F, _, 0x01, 0x08) => Instruction::SetStEqToVx(vx),
             (0x0F, _, 0x01, 0x0E) => Instruction::SetIEqToIPlusVx(vx),
             (0x0F, _, 0x02, 0x09) => Instruction::SetIEqToVx(vx),
-            (0x0F, _, 0x03, 0x03) => Instruction::StoreBcd(vx),
+            (0x0F, _, 0x03, 0x03) => Instruction::StoreBinaryCodedDecimal(vx),
             (0x0F, _, 0x05, 0x05) => Instruction::SetRegsInI(vx),
             (0x0F, _, 0x06, 0x05) => Instruction::GetRegsInI(vx),
-            _ => Instruction::Ignore(self.0),
+            _ => Instruction::Unknown,
         }
     }
 }

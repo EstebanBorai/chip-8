@@ -131,7 +131,6 @@ impl Cpu {
     /// Executes the provided instruction
     pub fn execute(&mut self, instr: Instruction) {
         match instr {
-            Instruction::Ignore(opcode) => println!("Ignored: {:#04x}", opcode),
             Instruction::Cls => self.display_buffer.reset(),
             Instruction::Ret => {
                 self.sp -= 1;
@@ -248,6 +247,33 @@ impl Cpu {
                 self.st = self.registers[vx];
                 self.pc += 2;
             }
+            Instruction::SetIEqToIPlusVx(vx) => {
+                self.i = self.i + self.registers[vx] as u16;
+            }
+            Instruction::SetIEqToVx(vx) => {
+                self.i = self.registers[vx] as u16 * 0x05;
+            }
+            Instruction::StoreBinaryCodedDecimal(vx) => {
+                let value = self.registers[vx];
+                let h = value / 100;
+                let t = (value - h * 100) / 10;
+                let o = value - h * 100 - t * 10;
+                let i = self.i as usize;
+
+                self.ram[i] = h;
+                self.ram[i + 1] = t;
+                self.ram[i + 2] = o;
+            }
+            Instruction::SetRegsInI(vx) => {
+                for reg in 0..vx + 1 {
+                    self.ram[self.i as usize + reg] = self.registers[reg];
+                }
+            }
+            Instruction::GetRegsInI(vx) => {
+                for reg in 0..vx + 1 {
+                    self.registers[reg] = self.ram[self.i as usize + reg];
+                }
+            }
             Instruction::SetVxEqToDt(vx) => {
                 self.registers[vx] = self.dt;
             }
@@ -262,7 +288,17 @@ impl Cpu {
 
                 self.pc += 2;
             }
-            _ => {}
+            Instruction::KeyOpVxNotPressed(vx) => {
+                if !self.keypad_state[self.registers[vx] as usize] {
+                    self.pc += 4;
+                }
+
+                self.pc += 2;
+            }
+            Instruction::JumpPcV0(nnn) => self.pc = nnn + (self.registers[0x0] as u16),
+            Instruction::Unknown => {
+                self.pc += 2;
+            }
         }
     }
 
