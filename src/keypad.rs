@@ -1,6 +1,8 @@
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::EventPump;
+use std::fmt;
+use std::ops::{Index, IndexMut};
 
 /// COSMAC VIP Keypad implementation mapped from modern PC's.
 ///
@@ -28,7 +30,55 @@ pub struct Keypad {
 
 /// For each of the 16 keys available, the state (pressed/not-pressed) is kept
 /// in a 16-bit array.
-pub type KeypadState = [bool; 16];
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct KeypadState([bool; 16]);
+
+impl KeypadState {
+    pub fn new() -> Self {
+        KeypadState([false; 16])
+    }
+}
+
+impl fmt::Display for KeypadState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let arr = self.0;
+
+        write!(
+            f,
+            "1:{} 2:{} 3:{} 4:{} Q:{} W:{} E:{} R:{} A:{} S:{} D:{} F:{} Z:{} X:{} C:{} V:{}",
+            arr[0x1] as u8,
+            arr[0x2] as u8,
+            arr[0x3] as u8,
+            arr[0xC] as u8,
+            arr[0x4] as u8,
+            arr[0x5] as u8,
+            arr[0x6] as u8,
+            arr[0xD] as u8,
+            arr[0x7] as u8,
+            arr[0x8] as u8,
+            arr[0x9] as u8,
+            arr[0xE] as u8,
+            arr[0xA] as u8,
+            arr[0x0] as u8,
+            arr[0xB] as u8,
+            arr[0xF] as u8,
+        )
+    }
+}
+
+impl Index<usize> for KeypadState {
+    type Output = bool;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl IndexMut<usize> for KeypadState {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
+    }
+}
 
 impl Keypad {
     /// Creates a new Keypad and polls events from Sdl2's `EventPump`.
@@ -56,7 +106,7 @@ impl Keypad {
     /// Retrieve pressed keys from Event Pump which matches any of the
     /// COSMAC VIP keys.
     fn pressed_keys(&self) -> KeypadState {
-        let mut keypad_state: KeypadState = [false; 16];
+        let mut keypad_state = KeypadState::new();
 
         self.event_pump
             .keyboard_state()

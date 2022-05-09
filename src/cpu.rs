@@ -65,7 +65,7 @@ impl Cpu {
             dt: 0,
             st: 0,
             display_buffer: DisplayBuffer::default(),
-            keypad_state: [false; 16],
+            keypad_state: KeypadState::new(),
             keypad_await: None,
         }
     }
@@ -111,8 +111,14 @@ impl Cpu {
             self.execute(instr);
 
             println!(
-                "PC: {}\t{} - {}\t{}\tI: {}\tSP: {}\tDT: {}\tST: {}",
-                self.pc, opcode, instr, self.registers, self.i, self.sp, self.dt, self.st
+                "============================================================================================================================",
+            );
+            println!(
+                "PC: {}\nOPCODE: {} ({})\nREGISTERS: {}\nIP:{}\tSP:{}\nTIMERS: DT:{}\tST:{}\nKB: {}",
+                self.pc, opcode, instr, self.registers, self.i, self.sp, self.dt, self.st, self.keypad_state
+            );
+            println!(
+                "============================================================================================================================",
             );
         }
 
@@ -125,7 +131,7 @@ impl Cpu {
 
     pub fn load_and_exec(&mut self, opcode: u16) {
         self.load(vec![(opcode >> 8) as u8, (opcode & 0xff) as u8].into());
-        self.cycle([false; 16]);
+        self.cycle(KeypadState::new());
     }
 
     /// Executes the provided instruction
@@ -141,12 +147,12 @@ impl Cpu {
             }
             Instruction::SysAddr => println!("WARN: COSMAC VIP Only Instruction. Skipping."),
             Instruction::Jump(address) => self.pc = address,
-            Instruction::Rand(vx, kk) => self.registers[vx] = kk & random::<u8>(),
             Instruction::CallSubroutine(address) => {
-                self.stack.push(self.pc);
                 self.sp += 1;
+                self.stack.push(self.pc);
                 self.pc = address;
             }
+            Instruction::Rand(vx, kk) => self.registers[vx] = kk & random::<u8>(),
             Instruction::CondEq(vx, kk) => {
                 if self.registers[vx] == kk {
                     self.pc += 2;

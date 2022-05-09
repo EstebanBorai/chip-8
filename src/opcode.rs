@@ -265,7 +265,7 @@ impl fmt::Display for Instruction {
             Instruction::Unknown => "UNKWN",
         };
 
-        write!(f, "{:04}", instr_code)
+        write!(f, "{}", instr_code)
     }
 }
 
