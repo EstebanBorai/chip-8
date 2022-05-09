@@ -4,7 +4,7 @@ use crate::display::buffer::DisplayBuffer;
 use crate::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use crate::keypad::KeypadState;
 use crate::memory::{Memory, USER_SPACE_STR};
-use crate::opcode::{self, Instruction, Opcode};
+use crate::opcode::{Instruction, Opcode};
 use crate::register_set::RegisterSet;
 use crate::rom::Rom;
 use crate::stack::Stack;
@@ -133,8 +133,11 @@ impl Cpu {
         match instr {
             Instruction::Cls => self.display_buffer.reset(),
             Instruction::Ret => {
-                self.sp -= 1;
-                self.pc = self.stack[self.sp as usize] as u16;
+                self.pc = self.stack.pop();
+
+                if self.sp > 0 {
+                    self.sp -= 1;
+                }
             }
             Instruction::SysAddr => println!("WARN: COSMAC VIP Only Instruction. Skipping."),
             Instruction::Jump(address) => self.pc = address,
@@ -406,12 +409,12 @@ mod tests {
     fn instr_ret() {
         let mut cpu = Cpu::new();
 
-        cpu.sp = 0x0005;
-        cpu.stack[4] = 0x2323;
+        cpu.stack.push(0x1234);
+        cpu.sp = 0x0003;
         cpu.load_and_exec(0x00EE);
 
-        assert_eq!(cpu.sp, 4);
-        assert_eq!(cpu.pc, 0x2323);
+        assert_eq!(cpu.sp, 2);
+        assert_eq!(cpu.pc, 0x1234);
     }
 
     #[test]
@@ -432,7 +435,7 @@ mod tests {
         assert_eq!(cpu.pc, 0x0123, "The value of PC is the one set by NNN");
         assert_eq!(cpu.sp, 1, "Stack Pointer is back to 1");
         assert_eq!(
-            cpu.stack.pop().unwrap(),
+            cpu.stack.pop(),
             0x200 + 2,
             "The PC (which starts on 0x200) is popped out of the stack"
         );

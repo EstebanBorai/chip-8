@@ -4,8 +4,8 @@ use std::ops::{Index, IndexMut};
 pub struct Stack(Vec<u16>);
 
 impl Stack {
-    pub fn pop(&mut self) -> Option<u16> {
-        self.0.pop()
+    pub fn pop(&mut self) -> u16 {
+        self.0.pop().expect("Stack out of bounds")
     }
 
     pub fn push(&mut self, value: u16) {
