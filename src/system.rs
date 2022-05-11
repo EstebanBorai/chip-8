@@ -1,12 +1,9 @@
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::EventPump;
-
 use crate::audio::Audio;
 use crate::config::Config;
 use crate::cpu::Cpu;
 use crate::display::Display;
 use crate::keypad::Keypad;
+use crate::memory::MEMORY_SIZE;
 use crate::rom::Rom;
 
 pub struct System {
@@ -40,6 +37,10 @@ impl System {
 
     pub fn start(mut self) {
         while let Ok(pressed_keys) = self.keypad.poll() {
+            if self.cpu.pc as usize >= MEMORY_SIZE {
+                panic!("EOF");
+            }
+
             let cycle_output = self.cpu.cycle(pressed_keys);
 
             if cycle_output.display_update {

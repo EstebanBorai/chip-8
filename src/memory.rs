@@ -28,6 +28,9 @@ pub const USER_SPACE_STR: usize = 0x0200;
 /// The highest memory address available
 pub const MEMORY_END: usize = 0x1000;
 
+/// Memory Capacity
+pub const MEMORY_SIZE: usize = 4096;
+
 /// # The CHIP-8 Memory
 ///
 /// CHIP-8 Memory is 4KB (4096 bytes) of size, the index register (IR) can only
@@ -47,7 +50,7 @@ pub const MEMORY_END: usize = 0x1000;
 /// 0x1000 ------------------> END - 4096B
 /// ```
 #[derive(Debug, PartialEq, Eq)]
-pub struct Memory([u8; 4096]);
+pub struct Memory([u8; MEMORY_SIZE]);
 
 impl Default for Memory {
     fn default() -> Self {
