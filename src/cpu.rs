@@ -208,7 +208,6 @@ impl Cpu {
             }
             Instruction::Mem(nnn) => {
                 self.i = nnn;
-                self.pc += 2;
             }
             Instruction::Draw(vx, vy, n) => {
                 // Set the X coordinate to the value in VX modulo 64 (or,
