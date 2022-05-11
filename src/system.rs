@@ -1,3 +1,6 @@
+use sdl2::keyboard::Keycode;
+use std::io::{stdin, stdout, Read, Write};
+
 use crate::audio::Audio;
 use crate::config::Config;
 use crate::cpu::Cpu;
@@ -13,6 +16,13 @@ pub struct System {
     cpu: Cpu,
     display: Display,
     keypad: Keypad,
+}
+
+fn pause() {
+    let mut stdout = stdout();
+    stdout.write(b"Press Enter to continue").unwrap();
+    stdout.flush().unwrap();
+    stdin().read(&mut [0]).unwrap();
 }
 
 impl System {
@@ -54,7 +64,17 @@ impl System {
                 self.audio.stop();
             }
 
-            std::thread::sleep(std::time::Duration::from_millis(2));
+            if self.config.debug {
+                let mut stdout = stdout();
+
+                stdout
+                    .write(b"Debugging Mode. Press ENTER to run next cycle.")
+                    .expect("Failed to write to stdout.");
+                stdout.flush().expect("Failed to flush stdout.");
+                stdin().read(&mut [0]).expect("Failed to read from stdin.");
+            } else {
+                std::thread::sleep(std::time::Duration::from_millis(2));
+            }
         }
     }
 }

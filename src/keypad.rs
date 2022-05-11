@@ -28,62 +28,23 @@ pub struct Keypad {
     event_pump: EventPump,
 }
 
-/// For each of the 16 keys available, the state (pressed/not-pressed) is kept
-/// in a 16-bit array.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct KeypadState([bool; 16]);
-
-impl Default for KeypadState {
-    fn default() -> Self {
-        KeypadState([false; 16])
-    }
-}
-
-impl fmt::Display for KeypadState {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let arr = self.0;
-
-        write!(
-            f,
-            "1:{} 2:{} 3:{} 4:{} Q:{} W:{} E:{} R:{} A:{} S:{} D:{} F:{} Z:{} X:{} C:{} V:{}",
-            arr[0x1] as u8,
-            arr[0x2] as u8,
-            arr[0x3] as u8,
-            arr[0xC] as u8,
-            arr[0x4] as u8,
-            arr[0x5] as u8,
-            arr[0x6] as u8,
-            arr[0xD] as u8,
-            arr[0x7] as u8,
-            arr[0x8] as u8,
-            arr[0x9] as u8,
-            arr[0xE] as u8,
-            arr[0xA] as u8,
-            arr[0x0] as u8,
-            arr[0xB] as u8,
-            arr[0xF] as u8,
-        )
-    }
-}
-
-impl Index<usize> for KeypadState {
-    type Output = bool;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.0[index]
-    }
-}
-
-impl IndexMut<usize> for KeypadState {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.0[index]
-    }
-}
-
 impl Keypad {
     /// Creates a new Keypad and polls events from Sdl2's `EventPump`.
     pub fn new(event_pump: EventPump) -> Self {
         Self { event_pump }
+    }
+
+    /// Waits for a `KeyDown` event and returns `true` if the pressed key's
+    /// keycode is the expected one. Otherwise returns `false`.
+    pub fn wait_for_key(&mut self, key: Keycode) -> bool {
+        let event = self.event_pump.wait_event();
+
+        match event {
+            Event::KeyDown {
+                keycode: Some(key), ..
+            } => true,
+            _ => false,
+        }
     }
 
     pub fn poll(&mut self) -> Result<KeypadState, ()> {
@@ -136,5 +97,57 @@ impl Keypad {
             });
 
         keypad_state
+    }
+}
+
+/// For each of the 16 keys available, the state (pressed/not-pressed) is kept
+/// in a 16-bit array.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct KeypadState([bool; 16]);
+
+impl Default for KeypadState {
+    fn default() -> Self {
+        KeypadState([false; 16])
+    }
+}
+
+impl fmt::Display for KeypadState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let arr = self.0;
+
+        write!(
+            f,
+            "1:{} 2:{} 3:{} 4:{} Q:{} W:{} E:{} R:{} A:{} S:{} D:{} F:{} Z:{} X:{} C:{} V:{}",
+            arr[0x1] as u8,
+            arr[0x2] as u8,
+            arr[0x3] as u8,
+            arr[0xC] as u8,
+            arr[0x4] as u8,
+            arr[0x5] as u8,
+            arr[0x6] as u8,
+            arr[0xD] as u8,
+            arr[0x7] as u8,
+            arr[0x8] as u8,
+            arr[0x9] as u8,
+            arr[0xE] as u8,
+            arr[0xA] as u8,
+            arr[0x0] as u8,
+            arr[0xB] as u8,
+            arr[0xF] as u8,
+        )
+    }
+}
+
+impl Index<usize> for KeypadState {
+    type Output = bool;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl IndexMut<usize> for KeypadState {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
     }
 }
