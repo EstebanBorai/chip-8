@@ -8,6 +8,7 @@ use crate::rom::Rom;
 
 pub struct System {
     audio: Audio,
+    #[allow(dead_code)]
     config: Config,
     cpu: Cpu,
     display: Display,

@@ -33,8 +33,8 @@ pub struct Keypad {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct KeypadState([bool; 16]);
 
-impl KeypadState {
-    pub fn new() -> Self {
+impl Default for KeypadState {
+    fn default() -> Self {
         KeypadState([false; 16])
     }
 }
@@ -106,7 +106,7 @@ impl Keypad {
     /// Retrieve pressed keys from Event Pump which matches any of the
     /// COSMAC VIP keys.
     fn pressed_keys(&self) -> KeypadState {
-        let mut keypad_state = KeypadState::new();
+        let mut keypad_state = KeypadState::default();
 
         self.event_pump
             .keyboard_state()

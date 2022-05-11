@@ -65,7 +65,7 @@ impl Cpu {
             dt: 0,
             st: 0,
             display_buffer: DisplayBuffer::default(),
-            keypad_state: KeypadState::new(),
+            keypad_state: KeypadState::default(),
             keypad_await: None,
         }
     }
@@ -131,7 +131,7 @@ impl Cpu {
 
     pub fn load_and_exec(&mut self, opcode: u16) {
         self.load(vec![(opcode >> 8) as u8, (opcode & 0xff) as u8].into());
-        self.cycle(KeypadState::new());
+        self.cycle(KeypadState::default());
     }
 
     /// Executes the provided instruction
@@ -335,7 +335,7 @@ impl Cpu {
 #[cfg(test)]
 mod tests {
     use crate::display::buffer::DisplayBuffer;
-    use crate::keypad::{Keypad, KeypadState};
+    use crate::keypad::KeypadState;
     use crate::memory::{Memory, USER_SPACE_STR};
     use crate::register_set::RegisterSet;
     use crate::stack::Stack;
@@ -355,7 +355,7 @@ mod tests {
         assert_eq!(cpu.dt, 0);
         assert_eq!(cpu.st, 0);
         assert_eq!(cpu.display_buffer, DisplayBuffer::default());
-        assert_eq!(cpu.keypad_state, KeypadState::new());
+        assert_eq!(cpu.keypad_state, KeypadState::default());
         assert_eq!(cpu.keypad_await, None);
     }
 
@@ -385,12 +385,12 @@ mod tests {
         cpu.load(rom.into());
 
         // Runs first cycle of CPU with 0xDFB8
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
 
         let written_display_buffer = cpu.display_buffer;
 
         // Runs second cycle of CPU with 0x00E0
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
 
         let cleared_display_buffer = cpu.display_buffer;
 
@@ -474,8 +474,8 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.pc,
@@ -493,7 +493,7 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.registers[0x0b], 0x0b,
@@ -511,8 +511,8 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.registers[0x0A], 0x08,
@@ -535,9 +535,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.registers[0x0a], 0x06,
@@ -556,9 +556,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.registers[0x0a], 0x0a,
@@ -577,9 +577,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.registers[0x0a], 0x0c,
@@ -598,9 +598,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.registers[0x0a], 0x17,
@@ -623,9 +623,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.registers[0x0d], 0x03,
@@ -648,9 +648,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.registers[0x1], 0xFE,
@@ -673,9 +673,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.registers[0x1], 0xF4,
@@ -697,8 +697,8 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.registers[0x0a], 0x05,
@@ -716,8 +716,8 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.registers[0x0a], 0x00,
@@ -735,8 +735,8 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.registers[0x0a], 0x14,
@@ -756,9 +756,9 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.pc,
@@ -776,7 +776,7 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(cpu.i, 0x0123, "Index register is set to 0x0123");
     }
@@ -793,7 +793,7 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.dt, cpu.registers[0x0A],
@@ -813,7 +813,7 @@ mod tests {
         ];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(
             cpu.dt, cpu.registers[0x0A],
@@ -830,7 +830,7 @@ mod tests {
         let rom = vec![0xF3, 0x18];
 
         cpu.load(rom.into());
-        cpu.cycle(KeypadState::new());
+        cpu.cycle(KeypadState::default());
 
         assert_eq!(cpu.st, 0x10);
     }
