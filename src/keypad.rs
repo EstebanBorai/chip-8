@@ -36,12 +36,13 @@ impl Keypad {
 
     /// Waits for a `KeyDown` event and returns `true` if the pressed key's
     /// keycode is the expected one. Otherwise returns `false`.
-    pub fn wait_for_key(&mut self, key: Keycode) -> bool {
+    pub fn wait_for_key(&mut self, _key: Keycode) -> bool {
         let event = self.event_pump.wait_event();
 
         match event {
             Event::KeyDown {
-                keycode: Some(key), ..
+                keycode: Some(_key),
+                ..
             } => true,
             _ => false,
         }

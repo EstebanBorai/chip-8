@@ -1,4 +1,3 @@
-use sdl2::keyboard::Keycode;
 use std::io::{stdin, stdout, Read, Write};
 
 use crate::audio::Audio;
@@ -16,13 +15,6 @@ pub struct System {
     cpu: Cpu,
     display: Display,
     keypad: Keypad,
-}
-
-fn pause() {
-    let mut stdout = stdout();
-    stdout.write(b"Press Enter to continue").unwrap();
-    stdout.flush().unwrap();
-    stdin().read(&mut [0]).unwrap();
 }
 
 impl System {
