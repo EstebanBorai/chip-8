@@ -60,10 +60,19 @@ impl System {
                 let mut stdout = stdout();
 
                 stdout
-                    .write(b"Debugging Mode. Press ENTER to run next cycle.")
+                    .write(b"Debugging Mode. Press ENTER to run next cycle.\nPress: q followed by ENTER to Quit\n")
                     .expect("Failed to write to stdout.");
                 stdout.flush().expect("Failed to flush stdout.");
-                stdin().read(&mut [0]).expect("Failed to read from stdin.");
+
+                if let Some(i) = stdin().bytes().next().and_then(|res| res.ok()) {
+                    // 113 - q
+                    if i == 113 {
+                        println!("Exiting...");
+                        break;
+                    }
+                }
+
+                continue;
             } else {
                 std::thread::sleep(std::time::Duration::from_millis(2));
             }
