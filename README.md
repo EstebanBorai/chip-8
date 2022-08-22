@@ -26,6 +26,8 @@ when running `cargo run`.
 LIBRARY_PATH="$LIBRARY_PATH:$(brew --prefix)/lib" cargo run roms/INVADERS
 ```
 
+> Alternative option could be: `LIBRARY_PATH="$LIBRARY_PATH:/opt/homebrew/lib" cargo run -- ./roms/INVADERS`
+
 ### Linux
 
 > Feel free to open a PR providing Linux system setup
