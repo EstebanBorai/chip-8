@@ -109,17 +109,6 @@ impl Cpu {
             }
 
             self.execute(instr);
-
-            println!(
-                "============================================================================================================================",
-            );
-            println!(
-                "PC: {}\nOPCODE: {} ({})\nREGISTERS: {}\nIP:{}\tSP:{}\nTIMERS: DT:{}\tST:{}\nKB: {}",
-                self.pc, opcode, instr, self.registers, self.i, self.sp, self.dt, self.st, self.keypad_state
-            );
-            println!(
-                "============================================================================================================================",
-            );
         }
 
         CycleOutput {
@@ -297,11 +286,12 @@ impl Cpu {
                 self.pc += 2;
             }
             Instruction::KeyOpVxNotPressed(vx) => {
-                if !self.keypad_state[self.registers[vx] as usize] {
-                    self.pc += 4;
+                if self.keypad_state[self.registers[vx] as usize] {
+                    self.pc += 2;
+                    return;
                 }
 
-                self.pc += 2;
+                self.pc += 4;
             }
             Instruction::JumpPcV0(nnn) => self.pc = nnn + (self.registers[0x0] as u16),
             Instruction::Unknown => {
@@ -833,5 +823,25 @@ mod tests {
         cpu.cycle(KeypadState::default());
 
         assert_eq!(cpu.st, 0x10);
+    }
+
+    #[test]
+    fn instr_key_op_vx_not_pressed_no_skip() {
+        let mut cpu = Cpu::new();
+
+        cpu.keypad_state[9] = true;
+        cpu.registers[0x5] = 9;
+        cpu.execute(crate::opcode::Instruction::KeyOpVxNotPressed(0x5));
+
+        assert_eq!(cpu.pc, (USER_SPACE_STR + 2) as u16)
+    }
+
+    #[test]
+    fn instr_key_op_vx_not_pressed_skip() {
+        let mut cpu = Cpu::new();
+
+        cpu.execute(crate::opcode::Instruction::KeyOpVxNotPressed(0x5));
+
+        assert_eq!(cpu.pc, (USER_SPACE_STR + 4) as u16)
     }
 }
