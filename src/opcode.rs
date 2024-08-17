@@ -361,17 +361,17 @@ impl Opcode {
     /// processed by the CPU.
     pub fn decode(&self) -> Instruction {
         let nibbles = (
-            (self.0 & 0xF000) >> 12 as u8,
-            (self.0 & 0x0F00) >> 8 as u8,
-            (self.0 & 0x00F0) >> 4 as u8,
+            (self.0 & 0xF000) >> 12_u8,
+            (self.0 & 0x0F00) >> 8_u8,
+            (self.0 & 0x00F0) >> 4_u8,
             (self.0 & 0x000F) as u8,
         );
 
-        let nnn = (self.0 & 0x0FFF) as u16;
+        let nnn = self.0 & 0x0FFF;
         let kk = (self.0 & 0x00FF) as u8;
         let vx = nibbles.1 as usize;
         let vy = nibbles.2 as usize;
-        let n = nibbles.3 as u8;
+        let n = nibbles.3;
 
         match nibbles {
             (0x00, 0x00, 0x0e, 0x00) => Instruction::Cls,

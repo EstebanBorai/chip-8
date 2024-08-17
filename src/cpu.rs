@@ -113,7 +113,7 @@ impl Cpu {
 
         CycleOutput {
             beep: self.st > 0,
-            display_buffer: self.display_buffer.clone(),
+            display_buffer: self.display_buffer,
             display_update,
         }
     }
@@ -163,16 +163,14 @@ impl Cpu {
             }
             Instruction::AssignVxToVy(vx, vy) => self.registers[vx] = self.registers[vy],
             Instruction::BitOpOr(vx, vy) => {
-                self.registers[vx] = self.registers[vx] | self.registers[vy];
+                self.registers[vx] |= self.registers[vy];
                 self.pc += 2;
             }
             Instruction::BitOpAnd(vx, vy) => {
-                self.registers[vx] = self.registers[vx] & self.registers[vy];
+                self.registers[vx] &= self.registers[vy];
                 self.pc += 2;
             }
-            Instruction::BitOpXor(vx, vy) => {
-                self.registers[vx] = self.registers[vx] ^ self.registers[vy]
-            }
+            Instruction::BitOpXor(vx, vy) => self.registers[vx] ^= self.registers[vy],
             Instruction::MathAdd(vx, vy) => {
                 let (result, overflows) = self.registers[vx].overflowing_add(self.registers[vy]);
 
@@ -185,10 +183,15 @@ impl Cpu {
                 self.registers[0xF] = overflows as u8;
                 self.registers[vx] = result;
             }
-            Instruction::BitOpShr(vx) => self.registers[vx] = self.registers[vx] >> 1,
-            Instruction::MathSubVyVx(vx, vy) => self.registers[vx] = self.registers[vx] - vy as u8,
+            Instruction::BitOpShr(vx) => self.registers[vx] >>= 1,
+            Instruction::MathSubVyVx(vx, vy) => {
+                let (result, overflows) = self.registers[vy].overflowing_sub(self.registers[vx]);
+
+                self.registers[0xF] = overflows as u8;
+                self.registers[vx] = result;
+            }
             Instruction::BitOpShl(vx) => {
-                self.registers[vx] = self.registers[vx] << 1;
+                self.registers[vx] <<= 1;
             }
             Instruction::CondVxNotEqVy(vx, vy) => {
                 if self.registers[vx] != self.registers[vy] {
@@ -207,17 +210,17 @@ impl Cpu {
                 let y = self.registers[vy] & 31;
 
                 // Set VF to 0
-                self.registers[0x0F] = 0x0;
+                self.registers[0xF] = 0x0;
 
                 for row in 0..n {
                     let bits = self.ram[(self.i + row as u16) as usize];
-                    let this_y = (y + row as u8) as u32 % SCREEN_HEIGHT;
+                    let this_y = (y + row) as u32 % SCREEN_HEIGHT;
 
                     for col in 0..8 {
                         let this_x = (x + col as u8) as u32 % SCREEN_WIDTH;
                         let current_color =
                             self.display_buffer[(this_y * SCREEN_WIDTH + this_x) as usize];
-                        let mask = 0x01 << 7 - col;
+                        let mask = 0x01 << (7 - col);
                         let color = bits & mask;
 
                         if color > 0 {
@@ -245,7 +248,7 @@ impl Cpu {
                 self.pc += 2;
             }
             Instruction::SetIEqToIPlusVx(vx) => {
-                self.i = self.i + self.registers[vx] as u16;
+                self.i += self.registers[vx] as u16;
             }
             Instruction::SetIEqToVx(vx) => {
                 self.i = self.registers[vx] as u16 * 0x05;
@@ -390,7 +393,7 @@ mod tests {
         );
 
         assert_ne!(
-            written_display_buffer.0.iter().fold(0, |acc, x| acc + x),
+            written_display_buffer.0.iter().sum::<u8>(),
             0,
             "Bytes were written"
         );

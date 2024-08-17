@@ -63,8 +63,8 @@ impl Display {
         Rect::new(
             (col * self.scale) as i32,
             (row * self.scale) as i32,
-            self.scale as u32,
-            self.scale as u32,
+            self.scale,
+            self.scale,
         )
     }
 }

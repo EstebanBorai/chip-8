@@ -1,8 +1,10 @@
+use std::fmt;
+use std::ops::{Index, IndexMut};
+
+use anyhow::Result;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::EventPump;
-use std::fmt;
-use std::ops::{Index, IndexMut};
 
 /// COSMAC VIP Keypad implementation mapped from modern PC's.
 ///
@@ -39,16 +41,16 @@ impl Keypad {
     pub fn wait_for_key(&mut self, _key: Keycode) -> bool {
         let event = self.event_pump.wait_event();
 
-        match event {
+        matches!(
+            event,
             Event::KeyDown {
                 keycode: Some(_key),
                 ..
-            } => true,
-            _ => false,
-        }
+            }
+        )
     }
 
-    pub fn poll(&mut self) -> Result<KeypadState, ()> {
+    pub fn poll(&mut self) -> Result<KeypadState> {
         for event in self.event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -103,14 +105,8 @@ impl Keypad {
 
 /// For each of the 16 keys available, the state (pressed/not-pressed) is kept
 /// in a 16-bit array.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Default)]
 pub struct KeypadState([bool; 16]);
-
-impl Default for KeypadState {
-    fn default() -> Self {
-        KeypadState([false; 16])
-    }
-}
 
 impl fmt::Display for KeypadState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

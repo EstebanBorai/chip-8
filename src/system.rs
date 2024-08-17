@@ -60,7 +60,7 @@ impl System {
                 let mut stdout = stdout();
 
                 stdout
-                    .write(b"Debugging Mode. Press ENTER to run next cycle.\nPress: q followed by ENTER to Quit\n")
+                    .write_all(b"Debugging Mode. Press ENTER to run next cycle.\nPress: q followed by ENTER to Quit\n")
                     .expect("Failed to write to stdout.");
                 stdout.flush().expect("Failed to flush stdout.");
 
